@@ -59,9 +59,32 @@
   document.addEventListener("click", function (e) {
     if (e.target.closest("#pdlg .pclose")) { dlg.close(); return; }
     if (e.target === dlg) { dlg.close(); return; }                // clic sur le fond
-    if (e.target.closest(".poster a")) return;                    // « Suivre » : on laisse le lien agir
+    if (e.target.closest(".poster a, .poster form")) return;      // « Suivre » : on ne touche pas à la fiche
     var card = e.target.closest(".poster");
     if (card) openCard(card);
+  });
+  document.addEventListener("submit", function (e) {
+    var form = e.target.closest("form.follow");
+    if (!form) return;
+    e.preventDefault();
+    var btn = form.querySelector("button"), id = form.querySelector("input[name=id]").value;
+    btn.disabled = true; btn.textContent = "Recherche de la source…";
+    fetch(form.action, {method: "POST", body: new FormData(form), headers: {"Accept": "application/json"}})
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        document.querySelectorAll('.pact[data-id="' + id + '"]').forEach(function (box) {
+          box.textContent = "";
+          var msg = document.createElement("span");
+          msg.className = res.ok && res.level === "ok" ? "oktxt" : "warntxt";
+          msg.textContent = (res.ok && res.level === "ok" ? "✅ " : "⚠️ ") + res.message + " ";
+          box.appendChild(msg);
+          if (res.url) { var a = document.createElement("a"); a.className = "btn"; a.href = res.url; a.textContent = "Ouvrir / modifier"; box.appendChild(a); }
+        });
+        document.querySelectorAll('.poster:has(.pact[data-id="' + id + '"]) .pbadges').forEach(function (b) {
+          if (res.ok) { var s = document.createElement("span"); s.className = "badge ok"; s.textContent = "suivi"; b.appendChild(s); }
+        });
+      })
+      .catch(function () { btn.disabled = false; btn.textContent = "Réessayer"; });
   });
   document.addEventListener("keydown", function (e) {
     if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("poster")) {

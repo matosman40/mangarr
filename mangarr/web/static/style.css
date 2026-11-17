@@ -115,3 +115,8 @@ label.check{flex-direction:row;align-items:center;gap:.5rem;color:var(--fg)}labe
 .card{transition:transform .2s ease,box-shadow .2s ease}.card:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,.25)}
 .card .cover img{transition:transform .4s ease}.card:hover .cover img{transform:scale(1.05)}
 .card .cover{overflow:hidden}
+
+.warntxt{color:#b7791f}.warnbox{border:1px solid #b7791f;padding:.6rem;border-radius:6px;color:var(--fg)}
+.pact .oktxt,.pact .warntxt{display:block;margin-bottom:.4rem;font-size:.85rem}
+.pinfo .oktxt{color:#8fe3b3}.pinfo .warntxt{color:#ffd37a}
+.pact form{margin:0}

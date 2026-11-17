@@ -6,7 +6,8 @@
   <a class="card {{ 'off' if not m.enabled }}" href="/manga/{{ m.id }}">
     <div class="cover">
       {% if m.has_cover %}<img loading="lazy" src="/cover/{{ m.id }}" alt="">{% else %}<span>{{ m.name.replace('_', ' ')[:1] }}</span>{% endif %}
-      {% if not m.enabled %}<em class="badge">suspendu</em>
+      {% if m.setup %}<em class="badge err">à configurer</em>
+      {% elif not m.enabled %}<em class="badge">suspendu</em>
       {% elif m.state.last_status == 'error' %}<em class="badge err">erreur</em>
       {% elif m.state.last_status == 'ok' or m.state.last_status == 'missing' %}<em class="badge ok">à jour</em>{% endif %}
     </div>

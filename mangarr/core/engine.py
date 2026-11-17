@@ -152,7 +152,7 @@ def handle_tomes(ctx, manga, folder, params, opts):
         ctx.echo(f"    ⏳ tome {vol} pas encore assemblable : {why}")
     if not opts.dry_run:
         try:
-            covers.ensure_cover(ctx, manga, folder, out_dir, md_id, params.get("mangadex_api", mangadex.MD_API))
+            covers.ensure_cover(ctx, manga, folder, out_dir, md_id, params.get("mangadex_api", ctx.settings.mangadex_api))
         except Exception as e:   # la jaquette ne doit jamais faire échouer la vérification
             ctx.log("warn", f"jaquette : {e}", mid)
 

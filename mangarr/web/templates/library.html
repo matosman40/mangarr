@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Bibliothèque · Mangarr{% endblock %}
+{% block content %}
+<h1>Bibliothèque détectée</h1>
+<p class="hint">Mangarr lit vos dossiers : tomes dans <code>{{ library_dir }}/&lt;manga&gt;/</code> et chapitres en cours dans
+<code>{{ chapters_dir }}/&lt;manga&gt;/</code>. Pour un manga déjà présent, le suivi reprend après le dernier chapitre ou tome possédé :
+rien n'est retéléchargé.</p>
+{% if done %}<p class="oktxt">✅ {{ done }} série(s) traitée(s){% if left %} ; il en reste {{ left }} : relancez « Tout suivre ».{% endif %}</p>{% endif %}
+{% if untracked %}
+<form method="post" action="/library/adopt-all" class="actions" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Recherche en cours…'">
+  <button class="btn primary">Tout suivre ({{ untracked }})</button>
+</form>
+{% endif %}
+<table>
+  <tr><th>Manga</th><th>Tomes</th><th>Chapitres</th><th>Suivi</th></tr>
+  {% for s in series %}
+  <tr>
+    <td><strong>{{ s.name.replace('_', ' ') }}</strong></td>
+    <td>{% if s.tomes %}{{ s.tomes | length }} (T{{ s.tomes[0] }}{% if s.tomes | length > 1 %}–T{{ s.tomes[-1] }}{% endif %}){% elif s.files %}{{ s.files }} fichier(s){% else %}–{% endif %}</td>
+    <td>{% if s.chapters %}{{ s.chapters | length }} (ch. {{ s.chapters[0] }}–{{ s.chapters[-1] }}){% else %}–{% endif %}</td>
+    <td>{% if s.tracked %}<a class="badge ok" href="/manga/{{ s.manga_id }}">suivi</a>
+      {% else %}<form method="post" action="/library/adopt" style="display:inline"><input type="hidden" name="name" value="{{ s.name }}"><button class="btn">Suivre</button></form>{% endif %}</td>
+  </tr>
+  {% else %}<tr><td colspan="4" class="empty">Aucun manga détecté dans ces dossiers.</td></tr>{% endfor %}
+</table>
+{% endblock %}

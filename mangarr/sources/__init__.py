@@ -11,7 +11,20 @@ from mangarr.sources.builtin import HtmlSource, PatternSource
 BUILTIN = set(SOURCES)
 
 __all__ = ["Source", "register", "SOURCES", "ChapterMissing", "FetchError", "fetch_image", "fetch_text",
-           "load_plugins", "load_custom_sources", "build_source"]
+           "load_plugins", "load_custom_sources", "build_source", "searchable_names"]
+
+
+def searchable_names():
+    """Noms des sources qui savent chercher dans un catalogue (search_url + result_regex, ou plugin)."""
+    out = []
+    for name in sorted(SOURCES):
+        cls = SOURCES[name]
+        try:
+            if cls({**cls.defaults}).can_search():
+                out.append(name)
+        except Exception:
+            pass
+    return out
 
 
 def load_plugins(plugins_dir, warn=None):

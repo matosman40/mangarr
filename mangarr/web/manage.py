@@ -9,10 +9,11 @@ from fastapi import Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from starlette.concurrency import run_in_threadpool
 
+from mangarr.autoadd import needs_setup
 from mangarr.core.util import clean_name
 from mangarr.core.net import ChapterMissing, FetchError, fetch_image, sniff_image_ext
 from mangarr.sources import (BUILTIN, SOURCES, HtmlSource, PatternSource, build_source,
-                             load_custom_sources)
+                             load_custom_sources, searchable_names)
 from mangarr.sources.patreon import API as PATREON_API
 from mangarr.sources.patreon import PatreonSource, inspect_export, post_id
 from mangarr.tomes import mangadex
@@ -155,16 +156,7 @@ def register(app, ctx, render):
                     keys=keys, labels=FIELD_LABELS, defaults=defaults)
 
     # ------------------------------------------------------------------ ajout
-    def searchable():
-        out = []
-        for name in sorted(SOURCES):
-            cls = SOURCES[name]
-            try:
-                if cls({**cls.defaults}).can_search():
-                    out.append(name)
-            except Exception:
-                pass
-        return out
+    searchable = searchable_names
 
     def followed_slugs():
         return {(m["source"], str(m["params"].get("slug", ""))) for m in repo.list_mangas()}
@@ -307,16 +299,8 @@ def register(app, ctx, render):
         return RedirectResponse(f"/manga/{mid}", status_code=303)
 
     def store_cover(mid, url):
-        """Jaquette choisie dans la recherche : uniquement depuis uploads.mangadex.org (pas d'URL arbitraire)."""
-        if not url.startswith("https://uploads.mangadex.org/"):
-            return
-        st, data = fetch_image(ctx.session, url)
-        if st == "ok" and sniff_image_ext(data):
-            os.makedirs(ctx.settings.covers_dir, exist_ok=True)
-            path = os.path.join(ctx.settings.covers_dir, f"{mid}.jpg")
-            with open(path, "wb") as f:
-                f.write(data)
-            repo.update_manga(mid, cover=path)
+        from mangarr.tomes.covers import store_md_cover
+        store_md_cover(ctx, mid, url)
 
     @app.post("/add")
     async def add_submit(request: Request):
@@ -327,7 +311,10 @@ def register(app, ctx, render):
         m = repo.get_manga(mid)
         if not m:
             return Response("Manga introuvable", status_code=404)
-        return render(request, "edit.html", **form_ctx(request, values_from_manga(m), edit_id=mid))
+        v = values_from_manga(m)
+        if needs_setup(m, repo.get_state(mid)):
+            v["enabled"] = True       # le but de la modification : finir la configuration puis activer le suivi
+        return render(request, "edit.html", **form_ctx(request, v, edit_id=mid))
 
     @app.post("/manga/{mid}/edit")
     async def edit_submit(request: Request, mid: int):

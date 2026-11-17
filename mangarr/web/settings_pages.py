@@ -54,6 +54,7 @@ def register(app, ctx, render):
         for svc, fields in LIB_FIELDS.items():
             values.update(view(integ.get(svc, {}), fields, notify.SECRETS[svc]))
         tr = translate.get_config(repo)
+        values["auto_start"] = repo.get_setting("auto_add", {}).get("start", "first")
         values.update(tr_provider=tr["provider"], tr_url=tr.get("url", ""), tr_key_set=bool(tr.get("api_key")))
         return dict(values=values, providers=translate.PROVIDERS, notif=notif, integ=integ,
                     on_new=notif.get("on_new", True), on_error=notif.get("on_error", True))
@@ -95,6 +96,13 @@ def register(app, ctx, render):
                 cfg.pop(svc, None)
         repo.set_setting("integrations", cfg)
         return RedirectResponse("/settings?saved=library", status_code=303)
+
+    @app.post("/settings/autoadd")
+    async def save_autoadd(request: Request):
+        form = await request.form()
+        start = form.get("start", "first")
+        repo.set_setting("auto_add", {"start": start if start in ("first", "latest") else "first"})
+        return RedirectResponse("/settings?saved=autoadd", status_code=303)
 
     @app.post("/settings/translation")
     async def save_translation(request: Request):

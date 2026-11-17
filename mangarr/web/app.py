@@ -13,9 +13,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from mangarr import __version__
+from mangarr.autoadd import needs_setup
 from mangarr.core.engine import RUN_LOCK, RunOptions, check_all
 from mangarr.tomes.plan import chapter_numbers
-from mangarr.web import discover, manage, settings_pages
+from mangarr.web import discover, library, manage, settings_pages
 from mangarr.web.app_utils import cover_src, fmt_ts
 
 BASE = Path(__file__).parent
@@ -65,7 +66,7 @@ def manga_view(ctx, m):
     st = ctx.repo.get_state(m["id"])
     lib = m.get("tomes_folder") or os.path.join(ctx.settings.library_dir, m["name"])
     tomes = sorted(f for f in os.listdir(lib) if f.endswith(".cbz")) if os.path.isdir(lib) else []
-    return {**m, "state": st, "last_check_txt": fmt_ts(st.get("last_check")), "tomes_count": len(tomes),
+    return {**m, "state": st, "setup": needs_setup(m, st), "last_check_txt": fmt_ts(st.get("last_check")), "tomes_count": len(tomes),
             "next_tome": next_tome(ctx, m), "has_cover": bool(m.get("cover") and os.path.isfile(m["cover"]))}
 
 
@@ -230,4 +231,5 @@ def create_app(ctx, scheduler=None, password=None):
     manage.register(app, ctx, render)
     settings_pages.register(app, ctx, render)
     discover.register(app, ctx, render)
+    library.register(app, ctx, render)
     return app

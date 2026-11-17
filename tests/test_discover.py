@@ -50,7 +50,7 @@ def test_results_card_content(client):
     assert "Comédie" in r.text and "Manga" in r.text and "En cours" in r.text and "ch. 1100" in r.text
     assert ("/proxy/cover?u=https%3A%2F%2Fuploads.mangadex.org%2Fcovers%2F00000001-2222-3333-4444-555555555555"
             "%2Fc.jpg.512.jpg") in r.text
-    assert "/add?mdid=00000001-2222-3333-4444-555555555555&amp;mdtitle=One%20Piece" in r.text
+    assert 'action="/discover/follow"' in r.text and 'name="id" value="00000001-2222-3333-4444-555555555555"' in r.text
 
 
 def test_french_synopsis_preferred_and_long_text_collapsed(client, server):

@@ -188,7 +188,8 @@ def _normalize(d):
     lang = next((l for l in ("fr", "en") if desc.get(l)), next((l for l, v in desc.items() if v), None))
     tags = [FR_TAGS.get(n, n) for t in a.get("tags", []) if t["attributes"].get("group") in ("genre", "theme")
             for n in [_pick(t["attributes"].get("name", {}), "en")]]
-    return {"id": d["id"], "title": _pick(a.get("title", {}), "fr", "en"),
+    alts = [t for alt in a.get("altTitles", []) for t in alt.values()] + list((a.get("title") or {}).values())
+    return {"id": d["id"], "title": _pick(a.get("title", {}), "fr", "en"), "alt_titles": list(dict.fromkeys(alts))[:12],
             "synopsis": clean_synopsis(desc.get(lang) if lang else ""), "synopsis_lang": (lang or "en").split("-")[0],
             "year": a.get("year"), "status": a.get("status"), "type": a.get("originalLanguage"),
             "demographic": a.get("publicationDemographic"), "rating": a.get("contentRating"),

@@ -4,6 +4,18 @@
 <h1>Réglages</h1>
 {% if saved %}<p class="oktxt">✅ Réglages enregistrés.</p>{% endif %}
 
+<h2>Ajout automatique</h2>
+<form method="post" action="/settings/autoadd" class="stack">
+  <label>Pour un manga qui n'est pas encore dans vos dossiers, commencer au
+    <select name="start">
+      <option value="first" {{ 'selected' if values.auto_start == 'first' }}>chapitre 1 (tout l'historique)</option>
+      <option value="latest" {{ 'selected' if values.auto_start == 'latest' }}>dernier chapitre publié (nouveautés seulement)</option>
+    </select>
+  </label>
+  <p class="hint">Un manga déjà présent dans vos dossiers reprend toujours après son dernier chapitre ou tome possédé.</p>
+  <div class="actions"><button class="btn primary">Enregistrer</button></div>
+</form>
+
 <h2>Traduction des résumés</h2>
 <form method="post" action="/settings/translation" class="stack">
   <label>Service

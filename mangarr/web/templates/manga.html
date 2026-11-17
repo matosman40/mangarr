@@ -7,6 +7,7 @@
   </div>
   <div>
     <h1>{{ m.name.replace('_', ' ') }}</h1>
+    {% if m.setup %}<p class="box warnbox">⚠️ {{ m.state.last_message }}. <a href="/manga/{{ m.id }}/edit">Modifier</a> pour terminer la configuration, puis cochez « Suivi actif ».</p>{% endif %}
     <dl>
       <dt>Source</dt><dd>{{ m.source }}</dd>
       <dt>Dernier chapitre</dt><dd>{{ m.state.last_chapter or '–' }}</dd>

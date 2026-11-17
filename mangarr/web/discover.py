@@ -5,12 +5,12 @@ import re
 from urllib.parse import urlencode, urlparse
 
 from fastapi import Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from starlette.concurrency import run_in_threadpool
 
 from collections import OrderedDict
 
-from mangarr import translate
+from mangarr import autoadd, library_scan, translate
 from mangarr.core.net import MD_HEADERS, sniff_image_ext
 from mangarr.tomes import mangadex
 
@@ -73,9 +73,11 @@ def register(app, ctx, render):
             return render(request, "_discover.html", items=[], error=f"MangaDex injoignable : {type(e).__name__}",
                           more_url=None, total=0, offset=offset)
         mine = followed_ids()
+        shelf = library_scan.index_by_norm(library_scan.scan(ctx), autoadd.norm)
         auto_translate = translate.get_config(repo)["provider"] != "none"
         for it in items:
             it["followed"] = it["id"] in mine
+            it["in_library"] = any(autoadd.norm(t) in shelf for t in [it["title"]] + it["alt_titles"])
             it["short"] = shorten(it["synopsis"])
             it["needs_tr"] = bool(it["synopsis"]) and it["synopsis_lang"] != "fr" and auto_translate
             remember(it)
@@ -88,6 +90,30 @@ def register(app, ctx, render):
                 [(k, v) for k, v in qp.multi_items() if k != "offset"] + [("offset", nxt)])
         return render(request, "_discover.html", items=items, error=None, more_url=more_url, total=total,
                       offset=offset)
+
+    @app.post("/discover/follow")
+    async def discover_follow(request: Request):
+        """Suivre en un clic : source trouvée automatiquement, dossier existant repris, modifiable ensuite."""
+        form = await request.form()
+        md_id = (form.get("id") or "").strip()
+        if not UUID.match(md_id):
+            return Response("identifiant invalide", status_code=400)
+        wants_json = "application/json" in request.headers.get("accept", "")
+
+        def work():
+            item = mangadex.one(ctx.fast_session, api(), md_id)
+            item["id"] = md_id
+            return autoadd.auto_add(ctx, item)
+
+        try:
+            res = await run_in_threadpool(work)
+        except Exception as e:
+            msg = f"MangaDex injoignable : {type(e).__name__}"
+            return JSONResponse({"ok": False, "message": msg}, status_code=502) if wants_json \
+                else Response(msg, status_code=502)
+        level, text = autoadd.describe(res)
+        res.update(ok=True, level=level, message=text, url=f"/manga/{res['id']}")
+        return JSONResponse(res) if wants_json else RedirectResponse(res["url"], status_code=303)
 
     @app.get("/discover/summary", response_class=HTMLResponse)
     async def discover_summary(request: Request, id: str = ""):

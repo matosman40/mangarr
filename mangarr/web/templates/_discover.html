@@ -10,7 +10,7 @@
     </div>
     <div class="pbadges">
       {% if it.type_label %}<span class="badge">{{ it.type_label }}</span>{% endif %}
-      {% if it.followed %}<span class="badge ok">suivi</span>{% endif %}
+      {% if it.followed %}<span class="badge ok">suivi</span>{% elif it.in_library %}<span class="badge ok">en bibliothèque</span>{% endif %}
     </div>
     <div class="pcap"><strong>{{ it.title }}</strong><small>{{ it.year or '' }}{% if it.status_label %} · {{ it.status_label }}{% endif %}</small></div>
     <div class="pinfo">
@@ -28,9 +28,9 @@
       </div>
       {% elif it.synopsis %}<div class="synwrap"><p class="syn">{{ it.synopsis }}</p></div>
       {% else %}<div class="synwrap"><p class="syn mut">Pas de synopsis.</p></div>{% endif %}
-      <div class="pact">
+      <div class="pact" data-id="{{ it.id }}">
         {% if it.followed %}<span class="mut">Déjà dans votre liste</span>
-        {% else %}<a class="btn primary" href="/add?mdid={{ it.id | urlencode }}&amp;mdtitle={{ it.title | urlencode }}&amp;cover={{ (it.cover_url or '') | urlencode }}">Suivre</a>{% endif %}
+        {% else %}<form class="follow" method="post" action="/discover/follow"><input type="hidden" name="id" value="{{ it.id }}"><button class="btn primary">{{ 'Suivre (déjà en bibliothèque)' if it.in_library else 'Suivre' }}</button></form>{% endif %}
       </div>
     </div>
   </article>

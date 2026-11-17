@@ -50,3 +50,18 @@ def ensure_cover(ctx, manga, folder, tomes_dir, md_id=None, md_api=mangadex.MD_A
             if not os.path.exists(dest):
                 shutil.copyfile(stored, dest)
     return stored
+
+
+def store_md_cover(ctx, mid, url):
+    """Télécharge la jaquette choisie (uniquement depuis uploads.mangadex.org) et l'associe au manga."""
+    if not url.startswith("https://uploads.mangadex.org/"):
+        return False
+    st, data = fetch_image(ctx.fast_session, url)
+    if st != "ok" or sniff_image_ext(data) is None:
+        return False
+    os.makedirs(ctx.settings.covers_dir, exist_ok=True)
+    path = os.path.join(ctx.settings.covers_dir, f"{mid}.jpg")
+    with open(path, "wb") as f:
+        f.write(data)
+    ctx.repo.update_manga(mid, cover=path)
+    return True

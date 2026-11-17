@@ -106,3 +106,12 @@ def reset_translation_state():
     yield
     translate.reset_block()
     discover.SYN_CACHE.clear()
+
+
+@pytest.fixture(autouse=True)
+def no_external_cover_download(monkeypatch):
+    """store_md_cover viserait uploads.mangadex.org : on l'enregistre sans rien télécharger."""
+    from mangarr.tomes import covers
+    calls = []
+    monkeypatch.setattr(covers, "store_md_cover", lambda ctx, mid, url: calls.append((mid, url)) or False)
+    return calls
