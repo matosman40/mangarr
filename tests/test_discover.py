@@ -56,7 +56,7 @@ def test_results_card_content(client):
 def test_french_synopsis_preferred_and_long_text_collapsed(client, server):
     server.add_json("/md/manga", {"data": [entry(desc={"en": "english", "fr": LONG})], "total": 1})
     r = client.get("/discover/results")
-    assert "Lire la suite" in r.text and "…" in r.text and LONG.strip() in r.text and "english" not in r.text
+    assert LONG.strip() in r.text and "english" not in r.text      # texte complet : la fiche l'affiche en entier
     server.add_json("/md/manga", {"data": [entry(desc={})], "total": 1})
     assert "Pas de synopsis" in client.get("/discover/results?q=x").text
 
@@ -142,3 +142,11 @@ def test_browse_links_carry_the_association(client, server, monkeypatch):
 def test_discover_needs_auth(ctx):
     c = TestClient(create_app(ctx, password="pw"), follow_redirects=False)
     assert c.get("/discover").status_code == 303 and c.get("/discover/results").status_code == 303
+
+
+def test_poster_wall_and_detail_dialog(client):
+    page = client.get("/discover").text
+    assert 'id="pdlg"' in page and "showModal" in page and "pclose" in page
+    r = client.get("/discover/results").text
+    assert 'class="pgrid"' in r and 'class="poster"' in r and 'data-title="One Piece"' in r
+    assert r.count('class="pinfo"') == 1 and 'class="pcap"' in r and "Suivre" in r

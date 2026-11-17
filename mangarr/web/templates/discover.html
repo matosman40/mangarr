@@ -36,4 +36,38 @@
   {% endif %}
 </form>
 <div id="dres"></div>
+
+<dialog id="pdlg" class="pdlg" aria-label="Fiche du manga">
+  <button type="button" class="pclose" aria-label="Fermer">×</button>
+  <div class="dimg"></div>
+  <div class="dright"><h2 class="dtitle"></h2><div class="dinfo"></div></div>
+</dialog>
+<script>
+(function () {
+  var dlg = document.getElementById("pdlg");
+  function openCard(card) {
+    var img = card.querySelector(".pcover img"), box = dlg.querySelector(".dimg");
+    box.innerHTML = "";
+    if (img) { var c = document.createElement("img"); c.src = img.src; c.alt = ""; box.appendChild(c); }
+    dlg.querySelector(".dtitle").textContent = card.dataset.title;
+    var info = dlg.querySelector(".dinfo");
+    info.innerHTML = card.querySelector(".pinfo").innerHTML;      // HTML produit et échappé par le serveur
+    var pending = info.querySelector(".synwrap[hx-get]");        // traduction pas encore arrivée : on la demande ici
+    if (pending && window.htmx) htmx.ajax("GET", pending.getAttribute("hx-get"), {target: pending, swap: "outerHTML"});
+    dlg.showModal();
+  }
+  document.addEventListener("click", function (e) {
+    if (e.target.closest("#pdlg .pclose")) { dlg.close(); return; }
+    if (e.target === dlg) { dlg.close(); return; }                // clic sur le fond
+    if (e.target.closest(".poster a")) return;                    // « Suivre » : on laisse le lien agir
+    var card = e.target.closest(".poster");
+    if (card) openCard(card);
+  });
+  document.addEventListener("keydown", function (e) {
+    if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("poster")) {
+      e.preventDefault(); openCard(e.target);
+    }
+  });
+})();
+</script>
 {% endblock %}
