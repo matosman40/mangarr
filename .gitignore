@@ -1,0 +1,33 @@
+# Données locales (jamais dans le dépôt)
+config/
+library/
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite3
+.env
+*.env
+!.env.example
+# Exports et caches
+patreon/
+*.part
+.mangadl_cache/
+.mangadl_state.json
+.patreon_cookie
+cache/
+covers/
+# Ancien script / configuration personnelle
+manga_dl.py
+mangadl_v*.py
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.idea/
+.vscode/
