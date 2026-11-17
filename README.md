@@ -10,6 +10,7 @@ Interface web, planificateur intégré, notifications, ligne de commande. Un seu
 ## Fonctionnalités
 
 - Grille des mangas avec jaquettes, détail, historique, journaux.
+- Page *Découvrir* : catalogue MangaDex filtrable (genres, type, statut, tri) avec jaquettes et synopsis.
 - Ajout guidé : recherche MangaDex (titre, jaquette, tomes), choix de la source, bouton « tester l'adresse ».
 - Sources : `pattern`, `html`, `lelscans`, `lelscanfr`, `animesama`, `patreon`, sources « formulaire »
   créées dans l'interface, et plugins Python pour les sites complexes.
@@ -63,6 +64,10 @@ Le conteneur tourne sans droits root (UID/GID 1000 par défaut) : les dossiers m
 
 ## Utilisation
 
+0. **Découvrir** : menu *Découvrir*, catalogue MangaDex avec jaquettes, synopsis (français de préférence),
+   genres et thèmes cumulables, type (manga, manhwa, manhua), statut, public, « disponible en français » et tri
+   (dernières sorties, populaires, mieux notés, récents, A→Z). Le contenu adulte est exclu sauf case cochée.
+   *Suivre* ouvre l'ajout déjà associé à MangaDex et cherche le titre sur vos sites.
 1. **Ajouter** : menu *Ajouter*.
    - *Parcourir un site* : tapez un titre (ou laissez vide pour le catalogue) et cherchez sur un site ou sur
      **tous les sites à la fois** ; « Choisir » remplit la source et le slug pour vous. Les mangas déjà suivis sont signalés.

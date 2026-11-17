@@ -1,0 +1,32 @@
+{% if error %}<p class="errtxt box">{{ error }}</p>{% endif %}
+{% if offset == 0 %}<p class="hint">{{ total }} résultat(s).</p>{% endif %}
+{% if not items and not error and offset == 0 %}<p class="empty">Aucun manga ne correspond à ces filtres.</p>{% endif %}
+<div class="dgrid">
+{% for it in items %}
+  <article class="dcard">
+    <div class="dcover">
+      {% if it.cover_url %}<img loading="lazy" referrerpolicy="no-referrer" src="{{ it.cover_url }}" alt="">{% else %}<span>{{ it.title[:1] }}</span>{% endif %}
+      {% if it.followed %}<em class="badge ok">suivi</em>{% endif %}
+    </div>
+    <div class="dbody">
+      <h3>{{ it.title }}</h3>
+      <div class="meta">
+        {% if it.type_label %}<span class="badge">{{ it.type_label }}</span>{% endif %}
+        {% if it.status_label %}<span class="badge">{{ it.status_label }}</span>{% endif %}
+        {% if it.year %}<span class="mut">{{ it.year }}</span>{% endif %}
+        {% if it.last_chapter %}<span class="mut">· ch. {{ it.last_chapter }}</span>{% endif %}
+      </div>
+      <div class="tags">{% for t in it.tags[:5] %}<span class="tag">{{ t }}</span>{% endfor %}</div>
+      {% if it.synopsis %}
+      <p class="syn">{{ it.short }}</p>
+      {% if it.short != it.synopsis %}<details><summary>Lire la suite</summary><p class="syn">{{ it.synopsis }}</p></details>{% endif %}
+      {% else %}<p class="syn mut">Pas de synopsis.</p>{% endif %}
+      {% if it.followed %}<span class="mut">Déjà dans votre liste.</span>
+      {% else %}<a class="btn primary" href="/add?mdid={{ it.id | urlencode }}&amp;mdtitle={{ it.title | urlencode }}&amp;cover={{ (it.cover_url or '') | urlencode }}">Suivre</a>{% endif %}
+    </div>
+  </article>
+{% endfor %}
+</div>
+{% if more_url %}
+<div class="actions" hx-get="{{ more_url }}" hx-trigger="click" hx-swap="outerHTML"><button type="button" class="btn">Voir plus</button></div>
+{% endif %}

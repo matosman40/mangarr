@@ -87,3 +87,11 @@ def isolated_source_registry():
     yield
     SOURCES.clear()
     SOURCES.update(saved)
+
+
+@pytest.fixture(autouse=True)
+def clear_mangadex_cache():
+    from mangarr.tomes import mangadex
+    mangadex.CACHE.clear()
+    yield
+    mangadex.CACHE.clear()

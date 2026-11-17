@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Découvrir · Mangarr{% endblock %}
+{% block content %}
+<h1>Découvrir des mangas</h1>
+{% if error %}<p class="errtxt box">{{ error }}</p>{% endif %}
+<form id="dform" class="filters" hx-get="/discover/results" hx-target="#dres" hx-trigger="change, submit, load" hx-indicator="#dres">
+  <div class="row3">
+    <label>Titre <input name="q" placeholder="Rechercher…" hx-trigger="keyup changed delay:500ms" hx-get="/discover/results" hx-target="#dres" hx-include="#dform"></label>
+    <label>Trier par
+      <select name="order">{% for k, (label, _) in orders.items() if k != 'relevance' %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select>
+    </label>
+    <label>Type
+      <select name="origin"><option value="">Tous</option>{% for k, label in types.items() %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select>
+    </label>
+  </div>
+  <div class="chips">
+    <span class="mut">Statut</span>
+    {% for k, label in statuses.items() %}<label class="chip"><input type="checkbox" name="status" value="{{ k }}"> {{ label }}</label>{% endfor %}
+  </div>
+  <div class="chips">
+    <span class="mut">Public</span>
+    {% for k, label in demos.items() %}<label class="chip"><input type="checkbox" name="demo" value="{{ k }}"> {{ label }}</label>{% endfor %}
+    <label class="chip"><input type="checkbox" name="fr" value="1"> Disponible en français</label>
+    <label class="chip"><input type="checkbox" name="adult" value="1"> Contenu adulte</label>
+  </div>
+  {% if tags %}
+  <details class="tagbox">
+    <summary>Genres et thèmes <small class="mut">(cumulés : tous doivent correspondre)</small></summary>
+    {% for grp, title in (('genre', 'Genres'), ('theme', 'Thèmes')) %}
+    <div class="chips"><span class="mut">{{ title }}</span>
+      {% for t in tags if t.group == grp %}<label class="chip"><input type="checkbox" name="tag" value="{{ t.id }}"> {{ t.label }}</label>{% endfor %}
+    </div>
+    {% endfor %}
+    <label class="chip"><input type="checkbox" name="any_tag" value="1"> Au moins un des genres choisis</label>
+  </details>
+  {% endif %}
+</form>
+<div id="dres"></div>
+{% endblock %}

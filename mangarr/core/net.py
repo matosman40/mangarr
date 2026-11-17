@@ -77,10 +77,10 @@ def fetch_text(session, url, referer=None):
     return r.text
 
 
-def make_session():
+def make_session(retries=4):
     s = requests.Session()
     s.headers.update(HEADERS)
-    retry = Retry(total=4, backoff_factor=1.5, status_forcelist=(429, 500, 502, 503, 504),
+    retry = Retry(total=retries, backoff_factor=1.5 if retries > 1 else 0.5, status_forcelist=(429, 500, 502, 503, 504),
                   allowed_methods=("GET",), respect_retry_after_header=True)
     for scheme in ("http://", "https://"):
         s.mount(scheme, HTTPAdapter(max_retries=retry))

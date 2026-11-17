@@ -9,14 +9,14 @@
     <div class="thumb">{% if r.cover %}<img loading="lazy" referrerpolicy="no-referrer" src="{{ r.cover }}" alt="">{% endif %}</div>
     <div class="rinfo"><strong>{{ r.title }}</strong><small>{{ g.source }} · {{ r.slug }}</small></div>
     {% if r.followed %}<span class="badge ok">déjà suivi</span>
-    {% else %}<a class="btn" href="/add?source={{ g.source | urlencode }}&amp;slug={{ r.slug | urlencode }}&amp;name={{ r.title | urlencode }}">Choisir</a>{% endif %}
+    {% else %}<a class="btn" href="/add?source={{ g.source | urlencode }}&amp;slug={{ r.slug | urlencode }}&amp;name={{ (md_title or r.title) | urlencode }}{{ carry | safe }}">Choisir</a>{% endif %}
   </div>
 {% endfor %}
 </div>
 {% endif %}
 {% endfor %}
 {% if more %}
-<div hx-get="/browse?source={{ source | urlencode }}&amp;q={{ q | urlencode }}&amp;page={{ page + 1 }}" hx-trigger="click" hx-swap="outerHTML" class="actions">
+<div hx-get="/browse?source={{ source | urlencode }}&amp;q={{ q | urlencode }}&amp;page={{ page + 1 }}{{ carry | safe }}" hx-trigger="click" hx-swap="outerHTML" class="actions">
   <button type="button" class="btn">Page suivante</button>
 </div>
 {% endif %}

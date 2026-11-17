@@ -16,10 +16,11 @@ def catalogue(server, items, path="/manga"):
 
 
 @pytest.fixture
-def client(ctx, server):
-    # lelscanfr (intégrée) pointée vers le faux serveur
-    SOURCES["lelscanfr"].defaults = {**SOURCES["lelscanfr"].defaults, "domain": server.url.replace("http://", "")}
-    SOURCES["lelscanfr"].defaults["search_url"] = server.url + "/manga?title={q}&page={page}"
+def client(ctx, server, monkeypatch):
+    # lelscanfr (intégrée) pointée vers le faux serveur, sans polluer les autres tests
+    monkeypatch.setattr(SOURCES["lelscanfr"], "defaults", {
+        **SOURCES["lelscanfr"].defaults, "domain": server.url.replace("http://", ""),
+        "search_url": server.url + "/manga?title={q}&page={page}"})
     return TestClient(create_app(ctx, password=""), follow_redirects=False)
 
 

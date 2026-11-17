@@ -5,12 +5,15 @@
 <section>
   <h2>1. Parcourir un site <small>(le slug est rempli pour vous)</small></h2>
   {% if browse_sources %}
-  <form class="inline" hx-get="/browse" hx-target="#browse" hx-indicator="#browse">
+  <form class="inline" hx-get="/browse" hx-target="#browse" hx-indicator="#browse" hx-trigger="submit{{ ', load' if site_q }}">
+    <input type="hidden" name="mdid" value="{{ v.mangadex_id or '' }}">
+    <input type="hidden" name="mdtitle" value="{{ v.mangadex_title or '' }}">
+    <input type="hidden" name="cover" value="{{ v.cover_url or '' }}">
     <select name="source" style="width:auto">
       <option value="">Tous les sites</option>
       {% for s in browse_sources %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
     </select>
-    <input name="q" placeholder="Titre (vide = catalogue)">
+    <input name="q" placeholder="Titre (vide = catalogue)" value="{{ site_q or '' }}">
     <button class="btn">Chercher</button>
   </form>
   <div id="browse"></div>
@@ -20,6 +23,7 @@
 </section>
 <section>
   <h2>2. Associer à MangaDex <small>(titre, jaquette et tomes)</small></h2>
+  {% if md_linked %}<p class="oktxt">✅ Associé à MangaDex : <strong>{{ md_title }}</strong> (jaquette et tomes repris automatiquement). Vous pouvez en choisir un autre ci-dessous.</p>{% endif %}
   <form class="inline" hx-get="/add/search" hx-target="#results" hx-indicator="#results" hx-trigger="submit{{ ', load' if mdq }}">
     <input name="q" placeholder="Titre du manga" value="{{ mdq or '' }}">
     <button class="btn">Rechercher</button>

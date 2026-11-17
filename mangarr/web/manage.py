@@ -3,6 +3,7 @@ import json
 import os
 import re
 import time
+from urllib.parse import quote
 
 from fastapi import Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -169,18 +170,25 @@ def register(app, ctx, render):
         return {(m["source"], str(m["params"].get("slug", ""))) for m in repo.list_mangas()}
 
     @app.get("/add", response_class=HTMLResponse)
-    def add_page(request: Request, source: str = "", slug: str = "", name: str = ""):
+    def add_page(request: Request, source: str = "", slug: str = "", name: str = "", mdid: str = "",
+                 mdtitle: str = "", cover: str = ""):
         found = searchable()
         src = source if source in SOURCES else (found[0] if found else "pattern")
+        mdid = mdid.strip() if re.fullmatch(r"[0-9a-fA-F-]{36}", mdid.strip()) else ""
+        title = (mdtitle or name).strip()
         v = {"source": src, "start_chap": 1, "tomes_enabled": True, "enabled": True,
-             "p": {"slug": slug} if slug else {}, "name": clean_name(name)}
-        return render(request, "add.html", mdq=name, browse_sources=found, **form_ctx(request, v))
+             "p": {"slug": slug} if slug else {}, "name": clean_name(name or title),
+             "mangadex_id": mdid, "mangadex_title": mdtitle.strip() if mdid else "",
+             "cover_url": cover if mdid and cover.startswith("https://uploads.mangadex.org/") else ""}
+        # titre connu : on lance la recherche sur les sites ; MangaDex n'est cherché que si l'association manque
+        return render(request, "add.html", mdq="" if mdid else name, site_q=title if (title and not slug) else "",
+                      md_linked=bool(mdid), md_title=mdtitle, browse_sources=found, **form_ctx(request, v))
 
     def run_search(name, q, page):
         cls = SOURCES[name]
         src = cls({**cls.defaults}, page_delay=0)
         try:
-            return name, src.search(ctx.session, q, page), None
+            return name, src.search(ctx.fast_session, q, page), None
         except NotImplementedError:
             return name, [], "pas de recherche pour cette source"
         except (FetchError, ChapterMissing) as e:
@@ -189,7 +197,8 @@ def register(app, ctx, render):
             return name, [], f"erreur inattendue : {e!r}"
 
     @app.get("/browse", response_class=HTMLResponse)
-    async def browse(request: Request, source: str = "", q: str = "", page: int = 1):
+    async def browse(request: Request, source: str = "", q: str = "", page: int = 1, mdid: str = "",
+                     mdtitle: str = "", cover: str = ""):
         from concurrent.futures import ThreadPoolExecutor
         names = [source] if source in SOURCES else searchable()
         page = max(1, min(page, 200))
@@ -204,7 +213,11 @@ def register(app, ctx, render):
         groups = [{"source": n, "error": err,
                    "results": [{**r, "followed": (n, r["slug"]) in mine} for r in res]} for n, res, err in raw]
         more = any(len(g["results"]) >= 10 for g in groups)
-        return render(request, "_browse.html", groups=groups, q=q, page=page, source=source, more=more)
+        carry = ""
+        if re.fullmatch(r"[0-9a-fA-F-]{36}", mdid):
+            carry = "&amp;mdid=" + quote(mdid) + "&amp;mdtitle=" + quote(mdtitle) + "&amp;cover=" + quote(cover)
+        return render(request, "_browse.html", groups=groups, q=q, page=page, source=source, more=more,
+                      carry=carry, md_title=mdtitle if carry else "")
 
     @app.post("/sources/test-search", response_class=HTMLResponse)
     async def source_test_search(request: Request):
@@ -240,7 +253,7 @@ def register(app, ctx, render):
         results, error = [], None
         if q.strip():
             try:
-                results, _ = await run_in_threadpool(mangadex.search, ctx.session, q.strip(),
+                results, _ = await run_in_threadpool(mangadex.search, ctx.fast_session, q.strip(),
                                                      ctx.settings.mangadex_api)
             except Exception as e:
                 error = f"Recherche MangaDex impossible : {e}"

@@ -42,6 +42,7 @@ class Context:
         self.db = db or Database(settings.db_path)
         self.repo = Repo(self.db)
         self.session = session or make_session()
+        self.fast_session = session or make_session(retries=1)   # pages interactives : pas d'attente interminable
         self.echo = echo or (lambda *a, **k: None)
         self.plugin_errors = []
         self.reload_sources()
