@@ -9,7 +9,7 @@ from mangarr.core.config import load_settings
 from mangarr.core.engine import Context, RunOptions, check_all
 from mangarr.sources import SOURCES
 
-COMMANDS = {"run", "list", "sources", "add", "remove", "daemon", "serve"}
+COMMANDS = {"run", "list", "sources", "add", "remove", "daemon", "serve", "import"}
 
 
 def parser():
@@ -37,6 +37,12 @@ def parser():
     rm = sub.add_parser("remove", help="supprimer un manga du suivi (les fichiers sont conservés)")
     rm.add_argument("name")
     sub.add_parser("daemon", help="planificateur seul (sans interface)")
+    imp = sub.add_parser("import", help="importer la liste MANGAS de l'ancien script (simulation par défaut)")
+    imp.add_argument("file")
+    imp.add_argument("--apply", action="store_true", help="écrire réellement dans la base")
+    imp.add_argument("--keep-folders", action="store_true", help="reprendre les dossiers folder/tomes_folder")
+    imp.add_argument("--chapters-root", help="dossier des chapitres actuels : reprend .mangadl_state.json")
+    imp.add_argument("--patreon-dir", help="dossier des exports Patreon à copier dans /config/patreon")
     sub.add_parser("serve", help="interface web + planificateur")
     return ap
 
@@ -94,6 +100,19 @@ def main(argv=None):
             return 2
         ctx.repo.delete_manga(m["id"])
         print(f"{m['name']} retiré du suivi")
+        return 0
+    if args.cmd == "import":
+        from mangarr.importer import import_mangas, parse_config
+        try:
+            with open(args.file, encoding="utf-8") as f:
+                mangas = parse_config(f.read())
+        except (OSError, ValueError) as e:
+            print(f"Import impossible : {e}", file=sys.stderr)
+            return 2
+        for r in import_mangas(ctx, mangas, args.apply, args.keep_folders, args.chapters_root, args.patreon_dir):
+            print(f"{r['action']:<14} {r['name']:<32} [{r['source']}] {r['note']}")
+        if not args.apply:
+            print("\nSimulation : relancez avec --apply pour écrire dans la base.")
         return 0
     if args.cmd == "serve":
         import uvicorn

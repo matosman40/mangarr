@@ -1,0 +1,2 @@
+{% if not results %}<p class="hint">{{ empty }}</p>{% endif %}
+{% for name, ok, info in results %}<p class="{{ 'oktxt' if ok else 'errtxt' }}">{{ '✅' if ok else '❌' }} {{ name }} : {{ info }}</p>{% endfor %}

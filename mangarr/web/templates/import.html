@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Import · Mangarr{% endblock %}
+{% block content %}
+<h1>Importer l'ancienne configuration</h1>
+<p class="hint">Choisissez votre ancien script (<code>manga_dl.py</code>). Seule la liste <code>MANGAS</code> est lue :
+le fichier est analysé sans être exécuté. Les chemins personnels ne sont pas repris (les dossiers se règlent par les volumes).</p>
+{% if error %}<p class="errtxt box">{{ error }}</p>{% endif %}
+<form method="post" action="/import" enctype="multipart/form-data" class="stack">
+  <label>Fichier <input type="file" name="file" accept=".py,text/x-python" required></label>
+  <label class="check"><input type="checkbox" name="apply"> Écrire réellement dans la base (sinon : simple simulation)</label>
+  <label class="check"><input type="checkbox" name="keep_folders"> Reprendre les dossiers <code>folder</code>/<code>tomes_folder</code> indiqués dans le fichier</label>
+  <div class="actions"><button class="btn primary">Analyser</button></div>
+</form>
+{% if rows is not none %}
+<h2>{{ 'Résultat' if applied else 'Simulation' }}</h2>
+<table>
+  <tr><th>Manga</th><th>Source</th><th>Action</th><th>Remarque</th></tr>
+  {% for r in rows %}<tr><td>{{ r.name }}</td><td>{{ r.source }}</td><td>{{ r.action }}</td><td>{{ r.note }}</td></tr>{% endfor %}
+</table>
+{% if not applied %}<p class="hint">Rien n'a été écrit. Cochez « Écrire réellement » et relancez pour importer.</p>
+{% else %}<p><a href="/">Voir les mangas →</a> · Pensez à déposer vos exports Patreon sur <a href="/patreon">la page Patreon</a>.</p>{% endif %}
+{% endif %}
+{% endblock %}

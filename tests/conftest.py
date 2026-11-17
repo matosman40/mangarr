@@ -18,6 +18,7 @@ class FakeServer:
     def __init__(self):
         self.routes = {}
         self.hits = []
+        self.posts = []     # (chemin, en-têtes, corps) des requêtes POST reçues
         outer = self
 
         class H(BaseHTTPRequestHandler):
@@ -30,6 +31,17 @@ class FakeServer:
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
+
+            def do_POST(self):
+                body = self.rfile.read(int(self.headers.get("Content-Length") or 0))
+                outer.posts.append((self.path, dict(self.headers), body))
+                path = self.path.split("?")[0]
+                status, ctype, out = outer.routes.get(("POST", path), (200, "application/json", b"{}"))
+                self.send_response(status)
+                self.send_header("Content-Type", ctype)
+                self.send_header("Content-Length", str(len(out)))
+                self.end_headers()
+                self.wfile.write(out)
 
             def log_message(self, *a):
                 pass

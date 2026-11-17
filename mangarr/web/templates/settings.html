@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Réglages · Mangarr{% endblock %}
+{% block content %}
+<h1>Réglages</h1>
+{% if saved %}<p class="oktxt">✅ Réglages enregistrés.</p>{% endif %}
+
+<h2>Notifications</h2>
+<form method="post" action="/settings/notifications" class="stack">
+  <fieldset><legend>Discord</legend>
+    <label>Adresse du webhook <input name="discord_url" placeholder="{{ 'enregistré : laisser vide pour conserver' if values.discord_url_set else 'https://discord.com/api/webhooks/...' }}" autocomplete="off"></label>
+    <label class="check"><input type="checkbox" name="clear_discord"> Supprimer</label>
+  </fieldset>
+  <fieldset><legend>Telegram</legend>
+    <label>Jeton du bot <input name="telegram_token" placeholder="{{ 'enregistré : laisser vide pour conserver' if values.telegram_token_set else '123456:ABC...' }}" autocomplete="off"></label>
+    <label>Identifiant de la conversation <input name="telegram_chat_id" value="{{ values.telegram_chat_id }}"></label>
+    <label class="check"><input type="checkbox" name="clear_telegram"> Supprimer</label>
+  </fieldset>
+  <fieldset><legend>ntfy</legend>
+    <label>Adresse du sujet <input name="ntfy_url" value="{{ values.ntfy_url }}" placeholder="https://ntfy.sh/mon-sujet"></label>
+    <label>Jeton (optionnel) <input name="ntfy_token" placeholder="{{ 'enregistré : laisser vide pour conserver' if values.ntfy_token_set else '' }}" autocomplete="off"></label>
+    <label class="check"><input type="checkbox" name="clear_ntfy"> Supprimer</label>
+  </fieldset>
+  <label class="check"><input type="checkbox" name="on_new" {{ 'checked' if on_new }}> Prévenir des nouveaux chapitres et tomes</label>
+  <label class="check"><input type="checkbox" name="on_error" {{ 'checked' if on_error }}> Prévenir des nouvelles erreurs</label>
+  <div class="actions">
+    <button class="btn primary">Enregistrer</button>
+    <button type="button" class="btn" hx-post="/settings/notifications/test" hx-target="#ntest">Envoyer un test</button>
+  </div>
+  <div id="ntest"></div>
+</form>
+
+<h2>Bibliothèques (rafraîchissement automatique)</h2>
+<form method="post" action="/settings/library" class="stack">
+  <fieldset><legend>Komga</legend>
+    <div class="row">
+      <label>Adresse du serveur <input name="komga_url" value="{{ values.komga_url }}" placeholder="http://192.168.1.10:25600"></label>
+      <label>Identifiant de la bibliothèque <input name="komga_library" value="{{ values.komga_library }}"></label>
+    </div>
+    <label>Clé d'API <input name="komga_api_key" placeholder="{{ 'enregistrée : laisser vide pour conserver' if values.komga_api_key_set else '' }}" autocomplete="off"></label>
+    <div class="row">
+      <label>…ou utilisateur <input name="komga_user" value="{{ values.komga_user }}" autocomplete="off"></label>
+      <label>mot de passe <input type="password" name="komga_password" placeholder="{{ 'enregistré' if values.komga_password_set else '' }}" autocomplete="new-password"></label>
+    </div>
+    <label class="check"><input type="checkbox" name="clear_komga"> Supprimer</label>
+  </fieldset>
+  <fieldset><legend>Kavita</legend>
+    <div class="row">
+      <label>Adresse du serveur <input name="kavita_url" value="{{ values.kavita_url }}" placeholder="http://192.168.1.10:5000"></label>
+      <label>Identifiant de la bibliothèque <input name="kavita_library" value="{{ values.kavita_library }}"></label>
+    </div>
+    <label>Clé d'API <input name="kavita_api_key" placeholder="{{ 'enregistrée : laisser vide pour conserver' if values.kavita_api_key_set else '' }}" autocomplete="off"></label>
+    <label class="check"><input type="checkbox" name="clear_kavita"> Supprimer</label>
+  </fieldset>
+  <div class="actions">
+    <button class="btn primary">Enregistrer</button>
+    <button type="button" class="btn" hx-post="/settings/library/test" hx-target="#ltest">Lancer une analyse maintenant</button>
+  </div>
+  <div id="ltest"></div>
+</form>
+<p class="hint">Plex détecte seul les nouveaux fichiers : activez l'analyse automatique de sa bibliothèque. Les clés et jetons sont stockés dans la base du volume <code>/config</code> et ne sont jamais réaffichés.</p>
+<p><a href="/import">Importer la configuration de l'ancien script →</a></p>
+{% endblock %}

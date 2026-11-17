@@ -8,6 +8,7 @@ from fastapi import Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from starlette.concurrency import run_in_threadpool
 
+from mangarr.core.util import clean_name
 from mangarr.core.net import ChapterMissing, FetchError, fetch_image, sniff_image_ext
 from mangarr.sources import (BUILTIN, SOURCES, HtmlSource, PatternSource, build_source,
                              load_custom_sources)
@@ -26,13 +27,8 @@ FIELD_LABELS = {
     "page_start": ("Première page (0 ou 1)", "0"),
     "page_format": ("Format du numéro de page (02 ou d)", "02"),
 }
-NAME_RE = re.compile(r"[^\w.\- ]", re.U)
 SOURCE_NAME_RE = re.compile(r"^[a-z0-9_-]{2,32}$")
 MAX_UPLOAD = 5 * 1024 * 1024
-
-
-def clean_name(raw):
-    return NAME_RE.sub("", raw or "").strip().replace(" ", "_")[:80]
 
 
 def kind_of(cls):

@@ -217,6 +217,7 @@ def check_all(ctx, only=None, opts=None) -> list[Result]:
         mangas = [m for n in only if (m := ctx.repo.get_manga(n))]
     else:
         mangas = ctx.repo.list_mangas(only_enabled=True)
+    started = time.time()
     with RUN_LOCK:
         results = []
         for m in mangas:
@@ -226,4 +227,10 @@ def check_all(ctx, only=None, opts=None) -> list[Result]:
                 ctx.log("error", f"❌ {m['name']} : erreur inattendue ({e!r})", m["id"])
                 results.append(Result(m["name"], 0, "error", repr(e)))
         ctx.repo.prune_logs()
+    if not opts.dry_run and results:
+        try:   # notifications / rafraîchissement : jamais bloquants pour la vérification
+            from mangarr import notify
+            notify.after_run(ctx, started, results)
+        except Exception as e:
+            ctx.repo.add_log("warn", f"notifications : {e!r}")
     return results
