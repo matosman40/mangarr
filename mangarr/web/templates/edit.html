@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Modifier {{ v.name }} · Mangarr{% endblock %}
+{% block content %}
+<h1>Modifier {{ v.name.replace('_', ' ') }}</h1>
+{% include "_form.html" %}
+<p><a href="/manga/{{ edit_id }}">← Retour au manga</a></p>
+{% endblock %}

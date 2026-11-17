@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Patreon · Mangarr{% endblock %}
+{% block content %}
+<h1>Exports Patreon</h1>
+<p class="hint">Patreon bloque les requêtes serveur et Mangarr ne contourne pas cette protection. Pour chaque post,
+ouvrez le lien « page d'API » dans votre navigateur connecté, enregistrez la page en <code>.json</code>, puis déposez-la ici.
+Les liens signés expirent (environ 38 h pour <code>download_url</code>, 14 jours pour l'original) : téléchargez peu après l'export.</p>
+
+<div id="drop" class="drop">Déposez les fichiers .json ici ou <label class="link">parcourez<input id="pick" type="file" accept=".json,application/json" multiple hidden></label></div>
+<ul id="dropres" class="dropres"></ul>
+
+{% for s in series %}
+<h2>{{ s.manga.name.replace('_', ' ') }} <small>{{ s.todo }} export(s) à faire</small></h2>
+<table>
+  <tr><th>Tome</th><th>Post</th><th>État</th><th>Expiration</th><th>Page d'API</th></tr>
+  {% for p in s.posts %}
+  <tr>
+    <td>T{{ p.chap }}</td><td>{{ p.pid }}</td>
+    <td>{% if p.have %}<span class="badge ok">déjà téléchargé</span>
+      {% elif p.status == 'ok' %}<span class="badge ok">prêt ({{ p.images }} images)</span>
+      {% elif p.status == 'expired' %}<span class="badge err">expiré</span>
+      {% elif p.status == 'invalid' %}<span class="badge err">invalide</span>
+      {% elif p.status == 'badurl' %}<span class="badge err">adresse du post invalide</span>
+      {% else %}<span class="badge">manquant</span>{% endif %}</td>
+    <td>{{ p.exp or '' }}</td>
+    <td>{% if p.api and not p.have %}<a href="{{ p.api }}" target="_blank" rel="noopener noreferrer">ouvrir</a>{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="empty">Aucune série Patreon. <a href="/add">Ajoutez-en une</a> avec la source « patreon ».</p>
+{% endfor %}
+<script>
+(function () {
+  var drop = document.getElementById("drop"), out = document.getElementById("dropres");
+  function send(files) {
+    var fd = new FormData();
+    for (var i = 0; i < files.length; i++) fd.append("files", files[i]);
+    fetch("/patreon/upload", {method: "POST", body: fd}).then(function (r) { return r.json(); }).then(function (res) {
+      out.innerHTML = "";
+      res.forEach(function (x) {
+        var li = document.createElement("li");
+        li.className = x.ok ? "oktxt" : "errtxt";
+        li.textContent = (x.ok ? "✅ " : "❌ ") + x.file + " : " + x.message;
+        out.appendChild(li);
+      });
+      if (res.some(function (x) { return x.ok; })) setTimeout(function () { location.reload(); }, 1800);
+    }).catch(function (e) { out.innerHTML = "<li class='errtxt'>Envoi impossible : " + e + "</li>"; });
+  }
+  ["dragenter", "dragover"].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("over"); }); });
+  ["dragleave", "drop"].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove("over"); }); });
+  drop.addEventListener("drop", function (e) { if (e.dataTransfer.files.length) send(e.dataTransfer.files); });
+  document.getElementById("pick").addEventListener("change", function (e) { if (e.target.files.length) send(e.target.files); });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% if error %}<p class="errtxt box">{{ error }}</p>{% endif %}
+<form method="post" action="{{ '/manga/%d/edit' % edit_id if edit_id else '/add' }}" class="stack" id="mform">
+  <input type="hidden" name="cover_url" id="cover_url" value="{{ v.cover_url or '' }}">
+  <label>Nom (dossier et fichiers)
+    <input name="name" id="f_name" value="{{ v.name or '' }}" required {{ 'readonly' if edit_id }}>
+  </label>
+  <div class="row">
+    <label>MangaDex (id)
+      <input name="mangadex_id" id="f_mdid" value="{{ v.mangadex_id or '' }}" placeholder="facultatif : détecté par le titre">
+    </label>
+    <label>Titre MangaDex
+      <input name="mangadex_title" id="f_mdtitle" value="{{ v.mangadex_title or '' }}" placeholder="facultatif">
+    </label>
+  </div>
+  <label>Source
+    <select name="source" hx-get="/add/fields" hx-target="#fields" hx-swap="innerHTML">
+      {% for s in sources %}<option value="{{ s }}" {{ 'selected' if s == v.source }}>{{ s }}</option>{% endfor %}
+    </select>
+  </label>
+  <div id="fields" class="stack">{% include "_fields.html" %}</div>
+  <div class="row">
+    <label>Chapitre de départ
+      <input type="number" name="start_chap" min="0" value="{{ v.start_chap or 1 }}">
+    </label>
+    <label>Chapitre à tester
+      <input type="number" name="chap" min="0" value="{{ v.chap or v.start_chap or 1 }}">
+    </label>
+  </div>
+  <div class="row">
+    <label>Dossier des chapitres (optionnel)
+      <input name="folder" value="{{ v.folder or '' }}" placeholder="par défaut : /library/_chapters/nom">
+    </label>
+    <label>Dossier des tomes (optionnel)
+      <input name="tomes_folder" value="{{ v.tomes_folder or '' }}" placeholder="par défaut : /library/nom">
+    </label>
+  </div>
+  <label class="check"><input type="checkbox" name="tomes_enabled" {{ 'checked' if v.tomes_enabled }}> Assembler les chapitres en tomes</label>
+  {% if edit_id %}<label class="check"><input type="checkbox" name="enabled" {{ 'checked' if v.enabled }}> Suivi actif</label>{% endif %}
+  <div class="actions">
+    <button type="button" class="btn" hx-post="/add/test" hx-target="#testres" hx-include="#mform" hx-indicator="#testres">Tester l'adresse</button>
+    <button class="btn primary">{{ 'Enregistrer' if edit_id else 'Ajouter' }}</button>
+  </div>
+  <div id="testres" class="hint"></div>
+</form>

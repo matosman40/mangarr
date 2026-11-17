@@ -1,0 +1,13 @@
+{% if error %}<p class="errtxt">{{ error }}</p>
+{% elif q and not results %}<p class="empty">Aucun résultat pour « {{ q }} ».</p>
+{% else %}
+<div class="results">
+{% for r in results %}
+  <div class="result">
+    <div class="thumb">{% if r.cover_url %}<img loading="lazy" src="{{ r.cover_url }}" alt="">{% endif %}</div>
+    <div class="rinfo"><strong>{{ r.title }}</strong><small>{{ r.year or '' }}</small></div>
+    <button type="button" class="btn pick" data-id="{{ r.id }}" data-title="{{ r.title }}" data-cover="{{ r.cover_url or '' }}">Choisir</button>
+  </div>
+{% endfor %}
+</div>
+{% endif %}

@@ -28,6 +28,7 @@ class Settings:
     page_delay: float = 0.3
     chapter_delay: float = 2.0
     max_pages: int = 250
+    mangadex_api: str = "https://api.mangadex.org"
 
     def __post_init__(self):
         if not self.chapters_dir:
@@ -66,4 +67,5 @@ def load_settings() -> Settings:
         page_delay=_float("MANGARR_PAGE_DELAY", 0.3),
         chapter_delay=_float("MANGARR_CHAPTER_DELAY", 2.0),
         max_pages=_int("MANGARR_MAX_PAGES", 250),
+        mangadex_api=e.get("MANGARR_MANGADEX_API", "https://api.mangadex.org"),
     )

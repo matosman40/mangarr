@@ -15,6 +15,8 @@ from fastapi.templating import Jinja2Templates
 from mangarr import __version__
 from mangarr.core.engine import RUN_LOCK, RunOptions, check_all
 from mangarr.tomes.plan import chapter_numbers
+from mangarr.web import manage
+from mangarr.web.app_utils import fmt_ts
 
 BASE = Path(__file__).parent
 COOKIE = "mangarr_session"
@@ -58,10 +60,6 @@ class Auth:
             return False
 
 
-def fmt_ts(ts):
-    return time.strftime("%d/%m/%Y %H:%M", time.localtime(ts)) if ts else "jamais"
-
-
 def manga_view(ctx, m):
     """Données d'affichage d'un manga : état, nombre de tomes, prochain tome."""
     st = ctx.repo.get_state(m["id"])
@@ -102,9 +100,10 @@ def create_app(ctx, scheduler=None, password=None):
     app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
     app.state.ctx, app.state.auth = ctx, auth
 
-    def render(request, name, **kw):
+    def render(request, name, status_code=200, **kw):
         return templates.TemplateResponse(request, name, {"auth_enabled": auth.enabled,
-                                                          "busy": RUN_LOCK.locked(), **kw})
+                                                          "busy": RUN_LOCK.locked(), **kw},
+                                          status_code=status_code)
 
     @app.middleware("http")
     async def guard(request: Request, call_next):
@@ -228,4 +227,5 @@ def create_app(ctx, scheduler=None, password=None):
             ctx.repo.set_setting("check_interval_min", minutes)
         return RedirectResponse("/logs", status_code=303)
 
+    manage.register(app, ctx, render)
     return app

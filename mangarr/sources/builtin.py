@@ -16,6 +16,8 @@ class PatternSource(Source):
     def _base(self, params):
         if params.get("base_img_url"):
             base = params["base_img_url"]
+            if "{" in base:
+                base = base.format(slug=params.get("slug", ""), domain=params.get("domain", ""))
         else:
             base = params["base_template"].format(slug=params.get("slug", ""), domain=params.get("domain", ""))
         return quote(base, safe=":/%")  # un %20 déjà présent n'est pas ré-encodé

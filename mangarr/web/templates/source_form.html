@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Source · Mangarr{% endblock %}
+{% block content %}
+<h1>{{ 'Modifier la source ' ~ v.name if existing else 'Nouvelle source' }}</h1>
+{% if error %}<p class="errtxt box">{{ error }}</p>{% endif %}
+<form method="post" action="/sources" class="stack" id="sform">
+  <input type="hidden" name="existing" value="{{ '1' if existing else '0' }}">
+  <label>Nom (minuscules, chiffres, - et _)
+    <input name="name" value="{{ v.name or '' }}" required {{ 'readonly' if existing }}>
+  </label>
+  <label>Description
+    <input name="description" value="{{ v.description or '' }}">
+  </label>
+  <label>Type
+    <select name="kind" hx-get="/sources/fields" hx-target="#sfields" hx-swap="innerHTML">
+      <option value="html" {{ 'selected' if v.kind == 'html' }}>html : une page par chapitre, on y cherche les images</option>
+      <option value="pattern" {{ 'selected' if v.kind == 'pattern' }}>pattern : images numérotées .../chapitre/page.jpg</option>
+    </select>
+  </label>
+  <div id="sfields" class="stack">{% include "_srcfields.html" %}</div>
+  <fieldset><legend>Tester</legend>
+    <div class="row">
+      <label>Slug d'essai (remplace {slug})<input name="t_slug" placeholder="mon-manga"></label>
+      <label>Chapitre d'essai<input type="number" name="chap" value="1" min="0"></label>
+    </div>
+    <button type="button" class="btn" hx-post="/sources/test" hx-target="#testres" hx-include="#sform">Tester</button>
+    <div id="testres" class="hint"></div>
+  </fieldset>
+  <div class="actions"><button class="btn primary">Enregistrer</button> <a class="btn" href="/sources">Annuler</a></div>
+</form>
+{% endblock %}

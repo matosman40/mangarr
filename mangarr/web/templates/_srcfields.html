@@ -1,0 +1,5 @@
+{% for k in keys %}
+<label>{{ labels[k][0] }}
+  <input name="d_{{ k }}" value="{{ v.d.get(k, '') }}" placeholder="{{ labels[k][1] }}">
+</label>
+{% endfor %}

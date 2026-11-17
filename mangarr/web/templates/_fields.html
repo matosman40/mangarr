@@ -1,0 +1,16 @@
+{% if kind == 'patreon' %}
+<label>Posts Patreon (une ligne par tome : <code>numéro adresse</code>)
+  <textarea name="posts_text" rows="6" placeholder="1 https://www.patreon.com/createur/posts/titre-123456789">{{ v.posts_text or '' }}</textarea>
+</label>
+<p class="hint">Patreon bloque les requêtes serveur : déposez ensuite les exports JSON sur la page <a href="/patreon">Patreon</a>.</p>
+{% else %}
+{% for k in keys %}
+<label>{{ labels[k][0] }}
+  <input name="p_{{ k }}" value="{{ v.p.get(k, '') }}" placeholder="{{ defaults.get(k, labels[k][1]) }}">
+</label>
+{% endfor %}
+{% if kind == 'plugin' %}<p class="hint">Source de type plugin : ses paramètres se saisissent en JSON ci-dessous.</p>{% endif %}
+{% endif %}
+<label>Paramètres avancés (JSON, optionnel)
+  <textarea name="extra" rows="3" placeholder='{"mangadex_api": "..."}'>{{ v.extra or '' }}</textarea>
+</label>

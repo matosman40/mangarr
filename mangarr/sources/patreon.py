@@ -128,3 +128,18 @@ class PatreonSource(Source):
             raise FetchError(f"export manquant : {path}")
         with open(path, encoding="utf-8-sig") as f:
             return len(media_candidates(json.load(f)))
+
+
+def inspect_export(path):
+    """(statut, images, expiration) : statut = missing | ok | expired | invalid."""
+    if not os.path.isfile(path):
+        return "missing", 0, None
+    try:
+        with open(path, encoding="utf-8-sig") as f:
+            items = media_candidates(json.load(f))
+    except (OSError, ValueError):
+        return "invalid", 0, None
+    if not items:
+        return "invalid", 0, None
+    exp = export_expiry(path)
+    return ("expired" if exp and exp < time.time() else "ok"), len(items), exp

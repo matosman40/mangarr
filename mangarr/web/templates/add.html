@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Ajouter un manga · Mangarr{% endblock %}
+{% block content %}
+<h1>Ajouter un manga</h1>
+<section>
+  <h2>1. Rechercher sur MangaDex <small>(titre, jaquette et tomes)</small></h2>
+  <form class="inline" hx-get="/add/search" hx-target="#results" hx-indicator="#results">
+    <input name="q" placeholder="Titre du manga" autofocus>
+    <button class="btn">Rechercher</button>
+  </form>
+  <div id="results"></div>
+</section>
+<section>
+  <h2>2. Source et réglages</h2>
+  {% include "_form.html" %}
+</section>
+<script>
+document.addEventListener("click", function (e) {
+  var b = e.target.closest(".pick");
+  if (!b) return;
+  document.getElementById("f_name").value = b.dataset.title.replace(/[^\w.\- ]/g, "").trim().replace(/ +/g, "_");
+  document.getElementById("f_mdid").value = b.dataset.id;
+  document.getElementById("f_mdtitle").value = b.dataset.title;
+  document.getElementById("cover_url").value = b.dataset.cover || "";
+  document.querySelectorAll(".result").forEach(function (r) { r.classList.remove("sel"); });
+  b.closest(".result").classList.add("sel");
+  document.getElementById("mform").scrollIntoView({behavior: "smooth"});
+});
+</script>
+{% endblock %}

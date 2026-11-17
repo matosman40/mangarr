@@ -16,6 +16,7 @@
     </dl>
     <div class="actions">
       <form method="post" action="/manga/{{ m.id }}/check"><button class="btn primary" {{ 'disabled' if busy }}>Vérifier maintenant</button></form>
+      <a class="btn" href="/manga/{{ m.id }}/edit">Modifier</a>
       <form method="post" action="/manga/{{ m.id }}/toggle"><button class="btn">{{ 'Suspendre' if m.enabled else 'Reprendre' }}</button></form>
       <form method="post" action="/manga/{{ m.id }}/delete" onsubmit="return confirm('Retirer du suivi ? Les fichiers de la bibliothèque sont conservés.')"><button class="btn danger">Retirer du suivi</button></form>
     </div>
