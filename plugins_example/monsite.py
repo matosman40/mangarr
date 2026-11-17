@@ -6,6 +6,12 @@ from mangarr.sources import ChapterMissing, FetchError, Source, fetch_image, fet
 class MonSite(Source):
     """Exemple : une API JSON qui liste les images d'un chapitre."""
 
+    def search(self, session, query, page=1):
+        """Facultatif : alimente « Parcourir un site ». Retourne [{"slug", "title", "cover"}]."""
+        import json
+        data = json.loads(fetch_text(session, f"https://exemple.invalid/api/search?q={query}&page={page}"))
+        return [{"slug": x["slug"], "title": x["title"], "cover": x.get("cover")} for x in data.get("results", [])]
+
     def iter_images(self, session, params, chap):
         # params contient les paramètres du manga (ex. "api_url": "https://exemple.invalid/api/{chap}")
         import json

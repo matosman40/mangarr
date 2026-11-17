@@ -22,8 +22,10 @@
     <div class="row">
       <label>Slug d'essai (remplace {slug})<input name="t_slug" placeholder="mon-manga"></label>
       <label>Chapitre d'essai<input type="number" name="chap" value="1" min="0"></label>
+      <label>Recherche d'essai<input name="t_q" placeholder="one piece"></label>
     </div>
-    <button type="button" class="btn" hx-post="/sources/test" hx-target="#testres" hx-include="#sform">Tester</button>
+    <button type="button" class="btn" hx-post="/sources/test" hx-target="#testres" hx-include="#sform">Tester un chapitre</button>
+    <button type="button" class="btn" hx-post="/sources/test-search" hx-target="#testres" hx-include="#sform">Tester la recherche</button>
     <div id="testres" class="hint"></div>
   </fieldset>
   <div class="actions"><button class="btn primary">Enregistrer</button> <a class="btn" href="/sources">Annuler</a></div>

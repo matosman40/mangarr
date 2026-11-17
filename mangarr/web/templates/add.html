@@ -3,15 +3,31 @@
 {% block content %}
 <h1>Ajouter un manga</h1>
 <section>
-  <h2>1. Rechercher sur MangaDex <small>(titre, jaquette et tomes)</small></h2>
-  <form class="inline" hx-get="/add/search" hx-target="#results" hx-indicator="#results">
-    <input name="q" placeholder="Titre du manga" autofocus>
+  <h2>1. Parcourir un site <small>(le slug est rempli pour vous)</small></h2>
+  {% if browse_sources %}
+  <form class="inline" hx-get="/browse" hx-target="#browse" hx-indicator="#browse">
+    <select name="source" style="width:auto">
+      <option value="">Tous les sites</option>
+      {% for s in browse_sources %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+    </select>
+    <input name="q" placeholder="Titre (vide = catalogue)">
+    <button class="btn">Chercher</button>
+  </form>
+  <div id="browse"></div>
+  {% else %}
+  <p class="hint">Aucune source avec recherche. Ajoutez une adresse de recherche à une source (page <a href="/sources">Sources</a>).</p>
+  {% endif %}
+</section>
+<section>
+  <h2>2. Associer à MangaDex <small>(titre, jaquette et tomes)</small></h2>
+  <form class="inline" hx-get="/add/search" hx-target="#results" hx-indicator="#results" hx-trigger="submit{{ ', load' if mdq }}">
+    <input name="q" placeholder="Titre du manga" value="{{ mdq or '' }}">
     <button class="btn">Rechercher</button>
   </form>
   <div id="results"></div>
 </section>
 <section>
-  <h2>2. Source et réglages</h2>
+  <h2>3. Source et réglages</h2>
   {% include "_form.html" %}
 </section>
 <script>

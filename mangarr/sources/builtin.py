@@ -131,7 +131,10 @@ class LelScans(PatternSource):
 class LelScanFr(HtmlSource):
     """lelscanfr : page par chapitre, images dans /storage/content/"""
     defaults = {"chapter_url": "https://{domain}/manga/{slug}/{chap}", "domain": "www.lelscanfr.com",
-                "img_filter": r"/storage/content/"}
+                "img_filter": r"/storage/content/",
+                "search_url": "https://{domain}/manga?title={q}&page={page}",
+                "result_regex": (r'<a href="https?://[^"/]+/manga/(?P<slug>[^"/?]+)"><figure[^>]*>.*?'
+                                 r'<img[^>]*data-src="(?P<cover>[^"]+)"[^>]*alt="(?P<title>[^"]*)"')}
 
 
 @register("animesama")

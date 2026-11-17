@@ -1,7 +1,12 @@
 """Classe de base des sources et registre."""
+import html as htmllib
+import re
 import time
+from urllib.parse import quote, urljoin
 
-from mangarr.core.net import ChapterMissing, FetchError
+from mangarr.core.net import ChapterMissing, FetchError, fetch_text
+
+MAX_RESULTS = 60
 
 SOURCES = {}
 
@@ -37,6 +42,42 @@ class Source:
     def iter_images(self, session, params, chap):
         """Génère les images (bytes) dans l'ordre. Voir ChapterMissing / FetchError."""
         raise NotImplementedError
+
+    # ---- recherche / catalogue (optionnel) ---------------------------------- #
+    def can_search(self):
+        """Vrai si la source sait lister son catalogue (paramètres search_url + result_regex, ou méthode search)."""
+        return type(self).search is not Source.search or bool(
+            self.params.get("search_url") and self.params.get("result_regex"))
+
+    def search(self, session, query, page=1):
+        """Liste de {slug, title, cover?, url?}. `query` vide = parcourir le catalogue (page `page`).
+
+        Par défaut : `search_url` (avec {q}, {page}, {domain}) et `result_regex` (groupes nommés slug, title, cover).
+        Un plugin peut redéfinir cette méthode.
+        """
+        tpl, rx = self.params.get("search_url"), self.params.get("result_regex")
+        if not tpl or not rx:
+            raise NotImplementedError("cette source n'a pas de recherche")
+        url = tpl.format(q=quote(query or ""), page=page, domain=self.params.get("domain", ""),
+                         slug=self.params.get("slug", ""))
+        try:
+            text = fetch_text(session, url)
+        except ChapterMissing:
+            return []
+        out, seen = [], set()
+        for m in re.finditer(rx, text, re.S | re.I):
+            g = m.groupdict()
+            slug = (g.get("slug") or "").strip()
+            if not slug or slug in seen:
+                continue
+            seen.add(slug)
+            cover = (g.get("cover") or "").strip()
+            out.append({"slug": htmllib.unescape(slug),
+                        "title": htmllib.unescape((g.get("title") or slug).strip()),
+                        "cover": urljoin(url, htmllib.unescape(cover)) if cover else None})
+            if len(out) >= MAX_RESULTS:
+                break
+        return out
 
     def sleep(self):
         if self.page_delay:

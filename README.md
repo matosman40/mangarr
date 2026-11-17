@@ -63,8 +63,11 @@ Le conteneur tourne sans droits root (UID/GID 1000 par défaut) : les dossiers m
 
 ## Utilisation
 
-1. **Ajouter** : menu *Ajouter*, recherchez le manga sur MangaDex, choisissez la source, renseignez ses champs,
-   cliquez *Tester l'adresse* (nombre d'images trouvées ou erreur explicite), puis *Ajouter*.
+1. **Ajouter** : menu *Ajouter*.
+   - *Parcourir un site* : tapez un titre (ou laissez vide pour le catalogue) et cherchez sur un site ou sur
+     **tous les sites à la fois** ; « Choisir » remplit la source et le slug pour vous. Les mangas déjà suivis sont signalés.
+   - *Associer à MangaDex* : titre exact, jaquette et données de tomes.
+   - Vérifiez les champs, cliquez *Tester l'adresse* (nombre d'images ou erreur explicite), puis *Ajouter*.
 2. **Vérifier** : *Tout vérifier* en haut, ou *Vérifier maintenant* sur la page d'un manga.
 3. **Suivre** : page *Journaux* (journal en direct, derniers téléchargements, intervalle automatique).
 
@@ -81,8 +84,12 @@ Le conteneur tourne sans droits root (UID/GID 1000 par défaut) : les dossiers m
 
 - **Sans code** : *Sources > Nouvelle source*. Type `html` (page par chapitre : modèle d'adresse + expression
   pour trouver les images) ou `pattern` (images en `.../chapitre/page.jpg`). Un bouton teste la source.
+- **Recherche dans le catalogue** : pour qu'un site apparaisse dans *Parcourir un site*, renseignez dans la source
+  `search_url` (avec `{q}` et `{page}`) et `result_regex` (groupes nommés `slug`, `title`, `cover`) ; le bouton
+  *Tester la recherche* affiche les résultats. Fournie pour `lelscanfr` ; à configurer pour les autres sites
+  (certains, comme anime-sama, protègent leur catalogue contre les requêtes automatiques : saisissez alors le slug à la main).
 - **Plugin Python** : déposez un `.py` dans `/config/plugins`, puis *Sources > Recharger les plugins*.
-  Voir [plugins_example/monsite.py](plugins_example/monsite.py).
+  Voir [plugins_example/monsite.py](plugins_example/monsite.py) (méthode `search` facultative pour le catalogue).
 - Un domaine qui change (`anime-sama.fr`, `lelscanfr.com`…) se règle par manga (champ « Domaine »).
 
 ### Patreon

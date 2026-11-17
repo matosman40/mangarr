@@ -26,7 +26,11 @@ FIELD_LABELS = {
     "img_filter": ("Filtre : l'adresse de l'image doit contenir (regex)", "/uploads/"),
     "page_start": ("Première page (0 ou 1)", "0"),
     "page_format": ("Format du numéro de page (02 ou d)", "02"),
+    "search_url": ("Recherche : adresse avec {q} (texte) et {page}", "https://site/manga?title={q}&page={page}"),
+    "result_regex": ("Recherche : expression des résultats (groupes nommés slug, title, cover)",
+                     '<a href="/manga/(?P<slug>[^"]+)".*?data-src="(?P<cover>[^"]+)".*?alt="(?P<title>[^"]*)"'),
 }
+SEARCH_KEYS = ["search_url", "result_regex"]
 SOURCE_NAME_RE = re.compile(r"^[a-z0-9_-]{2,32}$")
 MAX_UPLOAD = 5 * 1024 * 1024
 
@@ -44,6 +48,11 @@ def kind_of(cls):
 def keys_for_kind(kind):
     return {"html": ["chapter_url", "slug", "domain", "img_regex", "img_filter"],
             "pattern": ["base_img_url", "slug", "domain", "page_start", "page_format"]}.get(kind, [])
+
+
+def source_keys(kind):
+    """Champs de l'éditeur de sources : réglages du site + recherche."""
+    return keys_for_kind(kind) + SEARCH_KEYS
 
 
 def source_info(source_key):
@@ -145,10 +154,86 @@ def register(app, ctx, render):
                     keys=keys, labels=FIELD_LABELS, defaults=defaults)
 
     # ------------------------------------------------------------------ ajout
+    def searchable():
+        out = []
+        for name in sorted(SOURCES):
+            cls = SOURCES[name]
+            try:
+                if cls({**cls.defaults}).can_search():
+                    out.append(name)
+            except Exception:
+                pass
+        return out
+
+    def followed_slugs():
+        return {(m["source"], str(m["params"].get("slug", ""))) for m in repo.list_mangas()}
+
     @app.get("/add", response_class=HTMLResponse)
-    def add_page(request: Request):
-        v = {"source": "lelscanfr", "start_chap": 1, "tomes_enabled": True, "enabled": True, "p": {}}
-        return render(request, "add.html", **form_ctx(request, v))
+    def add_page(request: Request, source: str = "", slug: str = "", name: str = ""):
+        found = searchable()
+        src = source if source in SOURCES else (found[0] if found else "pattern")
+        v = {"source": src, "start_chap": 1, "tomes_enabled": True, "enabled": True,
+             "p": {"slug": slug} if slug else {}, "name": clean_name(name)}
+        return render(request, "add.html", mdq=name, browse_sources=found, **form_ctx(request, v))
+
+    def run_search(name, q, page):
+        cls = SOURCES[name]
+        src = cls({**cls.defaults}, page_delay=0)
+        try:
+            return name, src.search(ctx.session, q, page), None
+        except NotImplementedError:
+            return name, [], "pas de recherche pour cette source"
+        except (FetchError, ChapterMissing) as e:
+            return name, [], str(e)
+        except Exception as e:   # un site qui change de structure ne doit pas casser la page
+            return name, [], f"erreur inattendue : {e!r}"
+
+    @app.get("/browse", response_class=HTMLResponse)
+    async def browse(request: Request, source: str = "", q: str = "", page: int = 1):
+        from concurrent.futures import ThreadPoolExecutor
+        names = [source] if source in SOURCES else searchable()
+        page = max(1, min(page, 200))
+        q = q.strip()
+
+        def work():
+            with ThreadPoolExecutor(max_workers=max(1, min(6, len(names)))) as pool:
+                return list(pool.map(lambda n: run_search(n, q, page), names))
+
+        raw = await run_in_threadpool(work) if names else []
+        mine = followed_slugs()
+        groups = [{"source": n, "error": err,
+                   "results": [{**r, "followed": (n, r["slug"]) in mine} for r in res]} for n, res, err in raw]
+        more = any(len(g["results"]) >= 10 for g in groups)
+        return render(request, "_browse.html", groups=groups, q=q, page=page, source=source, more=more)
+
+    @app.post("/sources/test-search", response_class=HTMLResponse)
+    async def source_test_search(request: Request):
+        form = await request.form()
+        try:
+            kind, d = parse_source_form(form)
+            if not (d.get("search_url") and d.get("result_regex")):
+                raise ValueError("renseignez l'adresse de recherche et l'expression des résultats")
+            re.compile(d["result_regex"])
+            base = HtmlSource if kind == "html" else PatternSource
+            src = base(dict(d), page_delay=0)
+        except (ValueError, re.error) as e:
+            return render(request, "_test_result.html", ok=False, msg=str(e))
+        _, res, err = await run_in_threadpool(lambda: run_search_with(src, (form.get("t_q") or "").strip()))
+        if err:
+            return render(request, "_test_result.html", ok=False, msg=err)
+        if not res:
+            return render(request, "_test_result.html", ok=False,
+                          msg="aucun résultat : vérifiez l'expression (groupes nommés slug, title, cover)")
+        titles = ", ".join(r["title"] for r in res[:5])
+        return render(request, "_test_result.html", ok=True, msg=f"{len(res)} résultat(s) : {titles}…")
+
+    def run_search_with(src, q):
+        try:
+            return "", src.search(ctx.session, q, 1), None
+        except (FetchError, ChapterMissing) as e:
+            return "", [], str(e)
+        except Exception as e:
+            return "", [], f"erreur inattendue : {e!r}"
 
     @app.get("/add/search", response_class=HTMLResponse)
     async def add_search(request: Request, q: str = ""):
@@ -245,7 +330,11 @@ def register(app, ctx, render):
             cls = SOURCES[name]
             origin = "intégrée" if name in BUILTIN else ("formulaire" if name in custom else "plugin")
             doc = ((cls.__doc__ or "").strip().splitlines() or [""])[0]
-            rows.append({"name": name, "origin": origin, "kind": kind_of(cls), "doc": doc,
+            try:
+                can_search = cls({**cls.defaults}).can_search()
+            except Exception:
+                can_search = False
+            rows.append({"name": name, "origin": origin, "kind": kind_of(cls), "doc": doc, "search": can_search,
                          "used": sum(1 for m in repo.list_mangas() if m["source"] == name)})
         return rows
 
@@ -256,7 +345,7 @@ def register(app, ctx, render):
 
     def src_form_ctx(v, error=None, existing=False):
         kind = v.get("kind", "html")
-        return dict(v=v, error=error, existing=existing, keys=keys_for_kind(kind), labels=FIELD_LABELS)
+        return dict(v=v, error=error, existing=existing, keys=source_keys(kind), labels=FIELD_LABELS)
 
     @app.get("/sources/new", response_class=HTMLResponse)
     def source_new(request: Request):
@@ -280,7 +369,7 @@ def register(app, ctx, render):
         if kind not in ("html", "pattern"):
             raise ValueError("type de source invalide")
         d = {}
-        for k in keys_for_kind(kind):
+        for k in source_keys(kind):
             val = (form.get(f"d_{k}") or "").strip()
             if val:
                 d[k] = int(val) if k == "page_start" and re.fullmatch(r"-?\d+", val) else val
@@ -324,6 +413,11 @@ def register(app, ctx, render):
                 re.compile(d["img_regex"])
             if d.get("img_filter"):
                 re.compile(d["img_filter"])
+            if bool(d.get("search_url")) != bool(d.get("result_regex")):
+                raise ValueError("la recherche demande à la fois l'adresse et l'expression des résultats")
+            if d.get("result_regex"):
+                if "slug" not in re.compile(d["result_regex"]).groupindex:
+                    raise ValueError("l'expression des résultats doit contenir un groupe nommé (?P<slug>...)")
         except (ValueError, re.error) as e:
             v = {"name": name, "kind": form.get("kind", "html"), "description": form.get("description", ""),
                  "d": {k[2:]: form[k] for k in form.keys() if k.startswith("d_")}}

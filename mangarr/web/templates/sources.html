@@ -9,9 +9,9 @@
   <form method="post" action="/sources/reload"><button class="btn">Recharger les plugins</button></form>
 </div>
 <table>
-  <tr><th>Nom</th><th>Origine</th><th>Type</th><th>Description</th><th>Mangas</th><th></th></tr>
+  <tr><th>Nom</th><th>Origine</th><th>Type</th><th>Description</th><th>Recherche</th><th>Mangas</th><th></th></tr>
   {% for r in rows %}
-  <tr><td><strong>{{ r.name }}</strong></td><td>{{ r.origin }}</td><td>{{ r.kind }}</td><td>{{ r.doc }}</td><td>{{ r.used }}</td>
+  <tr><td><strong>{{ r.name }}</strong></td><td>{{ r.origin }}</td><td>{{ r.kind }}</td><td>{{ r.doc }}</td><td>{{ '✅' if r.search else '–' }}</td><td>{{ r.used }}</td>
     <td>{% if r.origin == 'formulaire' %}
       <a class="btn" href="/sources/{{ r.name }}/edit">Modifier</a>
       <form method="post" action="/sources/{{ r.name }}/delete" style="display:inline" onsubmit="return confirm('Supprimer cette source ?')"><button class="btn danger">Supprimer</button></form>
