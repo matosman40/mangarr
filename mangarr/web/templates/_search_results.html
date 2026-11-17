@@ -4,7 +4,7 @@
 <div class="results">
 {% for r in results %}
   <div class="result">
-    <div class="thumb">{% if r.cover_url %}<img loading="lazy" src="{{ r.cover_url }}" alt="">{% endif %}</div>
+    <div class="thumb">{% if r.cover_url %}<img loading="lazy" src="{{ cover_src(r.cover_url) }}" alt="" onerror="this.remove()">{% endif %}</div>
     <div class="rinfo"><strong>{{ r.title }}</strong><small>{{ r.year or '' }}</small></div>
     <button type="button" class="btn pick" data-id="{{ r.id }}" data-title="{{ r.title }}" data-cover="{{ r.cover_url or '' }}">Choisir</button>
   </div>

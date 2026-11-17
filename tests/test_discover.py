@@ -48,7 +48,8 @@ def test_results_card_content(client):
     r = client.get("/discover/results")
     assert "One Piece" in r.text and "English text" in r.text and "1997" in r.text
     assert "Comédie" in r.text and "Manga" in r.text and "En cours" in r.text and "ch. 1100" in r.text
-    assert "https://uploads.mangadex.org/covers/00000001-2222-3333-4444-555555555555/c.jpg.512.jpg" in r.text
+    assert ("/proxy/cover?u=https%3A%2F%2Fuploads.mangadex.org%2Fcovers%2F00000001-2222-3333-4444-555555555555"
+            "%2Fc.jpg.512.jpg") in r.text
     assert "/add?mdid=00000001-2222-3333-4444-555555555555&amp;mdtitle=One%20Piece" in r.text
 
 

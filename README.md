@@ -110,6 +110,19 @@ cette protection** et ne stocke aucun cookie : il lit des exports JSON faits dep
    (Pour un seul post : ouvrez le lien « page d'API » affiché sur la page Patreon et enregistrez-la en `.json`.)
 4. Glissez-déposez les fichiers sur la page *Patreon*, puis lancez une vérification.
 
+### Résumés en français
+
+MangaDex n'a de résumé français que pour une partie des titres. Les autres sont traduits automatiquement (une seule fois,
+puis mis en cache dans `/config/cache`). *Réglages > Traduction des résumés* :
+- **MyMemory** (par défaut) : gratuit, sans clé, mais avec un quota quotidien. Quand il est atteint, le résumé original
+  s'affiche avec une note, et Mangarr réessaie plus tard.
+- **LibreTranslate** auto-hébergé : sans limite, et aucun texte ne quitte votre réseau. Indiquez son adresse
+  (et sa clé d'API si besoin).
+- **Désactivée** : résumés affichés dans leur langue d'origine.
+
+Seuls des résumés publics de MangaDex sont envoyés au service de traduction ; aucune donnée de votre installation.
+Les jaquettes de la page *Découvrir* sont téléchargées par le serveur (puis mises en cache) plutôt que par votre navigateur.
+
 ### Notifications et bibliothèques
 
 *Réglages* : webhook Discord, bot Telegram, sujet ntfy ; Komga (clé d'API ou identifiant/mot de passe + id de

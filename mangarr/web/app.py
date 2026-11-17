@@ -16,7 +16,7 @@ from mangarr import __version__
 from mangarr.core.engine import RUN_LOCK, RunOptions, check_all
 from mangarr.tomes.plan import chapter_numbers
 from mangarr.web import discover, manage, settings_pages
-from mangarr.web.app_utils import fmt_ts
+from mangarr.web.app_utils import cover_src, fmt_ts
 
 BASE = Path(__file__).parent
 COOKIE = "mangarr_session"
@@ -94,7 +94,7 @@ def next_tome(ctx, m):
 def create_app(ctx, scheduler=None, password=None):
     app = FastAPI(title="Mangarr", version=__version__, docs_url=None, redoc_url=None, openapi_url=None)
     templates = Jinja2Templates(directory=str(BASE / "templates"))
-    templates.env.globals.update(version=__version__, fmt_ts=fmt_ts)
+    templates.env.globals.update(version=__version__, fmt_ts=fmt_ts, cover_src=cover_src)
     auth = Auth(password if password is not None else os.environ.get("MANGARR_PASSWORD", ""),
                 ctx.settings.config_dir)
     app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")

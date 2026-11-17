@@ -3,7 +3,7 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.concurrency import run_in_threadpool
 
-from mangarr import notify
+from mangarr import notify, translate
 from mangarr.importer import import_mangas, parse_config
 
 MAX_IMPORT = 2 * 1024 * 1024
@@ -53,7 +53,9 @@ def register(app, ctx, render):
             values.update(view(notif.get(svc, {}), fields, notify.SECRETS[svc]))
         for svc, fields in LIB_FIELDS.items():
             values.update(view(integ.get(svc, {}), fields, notify.SECRETS[svc]))
-        return dict(values=values, notif=notif, integ=integ,
+        tr = translate.get_config(repo)
+        values.update(tr_provider=tr["provider"], tr_url=tr.get("url", ""), tr_key_set=bool(tr.get("api_key")))
+        return dict(values=values, providers=translate.PROVIDERS, notif=notif, integ=integ,
                     on_new=notif.get("on_new", True), on_error=notif.get("on_error", True))
 
     @app.get("/settings", response_class=HTMLResponse)
@@ -93,6 +95,27 @@ def register(app, ctx, render):
                 cfg.pop(svc, None)
         repo.set_setting("integrations", cfg)
         return RedirectResponse("/settings?saved=library", status_code=303)
+
+    @app.post("/settings/translation")
+    async def save_translation(request: Request):
+        form = await request.form()
+        old = translate.get_config(repo)
+        provider = form.get("provider", "mymemory")
+        url = (form.get("tr_url") or "").strip()
+        if provider not in translate.PROVIDERS or (url and not url.startswith(("http://", "https://"))):
+            return RedirectResponse("/settings?saved=translation-invalide", status_code=303)
+        cfg = {"provider": provider, "url": url}
+        key = (form.get("tr_key") or "").strip() or ("" if form.get("clear_tr_key") else old.get("api_key", ""))
+        if key:
+            cfg["api_key"] = key
+        repo.set_setting("translation", cfg)
+        return RedirectResponse("/settings?saved=translation", status_code=303)
+
+    @app.post("/settings/translation/test", response_class=HTMLResponse)
+    async def test_translation(request: Request):
+        text, err = await run_in_threadpool(translate.translate, ctx, "The strongest hero returns to save the world.", "en")
+        return render(request, "_svc_results.html", results=[("traduction", err is None, text if not err else err)],
+                      empty="")
 
     @app.post("/settings/notifications/test", response_class=HTMLResponse)
     async def test_notifications(request: Request):

@@ -95,3 +95,14 @@ def clear_mangadex_cache():
     mangadex.CACHE.clear()
     yield
     mangadex.CACHE.clear()
+
+
+@pytest.fixture(autouse=True)
+def reset_translation_state():
+    from mangarr import translate
+    from mangarr.web import discover
+    translate.reset_block()
+    discover.SYN_CACHE.clear()
+    yield
+    translate.reset_block()
+    discover.SYN_CACHE.clear()

@@ -1,0 +1,5 @@
+<div>
+  <p class="syn">{{ short }}</p>
+  {% if short != full %}<details><summary>Lire la suite</summary><p class="syn">{{ full }}</p></details>{% endif %}
+  {% if error %}<small class="mut">(non traduit : {{ error }})</small>{% endif %}
+</div>

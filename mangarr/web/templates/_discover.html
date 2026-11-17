@@ -5,7 +5,7 @@
 {% for it in items %}
   <article class="dcard">
     <div class="dcover">
-      {% if it.cover_url %}<img loading="lazy" referrerpolicy="no-referrer" src="{{ it.cover_url }}" alt="">{% else %}<span>{{ it.title[:1] }}</span>{% endif %}
+      {% if it.cover_url %}<img loading="lazy" referrerpolicy="no-referrer" src="{{ cover_src(it.cover_url) }}" alt="" onerror="this.remove()">{% else %}<span>{{ it.title[:1] }}</span>{% endif %}
       {% if it.followed %}<em class="badge ok">suivi</em>{% endif %}
     </div>
     <div class="dbody">
@@ -17,7 +17,11 @@
         {% if it.last_chapter %}<span class="mut">· ch. {{ it.last_chapter }}</span>{% endif %}
       </div>
       <div class="tags">{% for t in it.tags[:5] %}<span class="tag">{{ t }}</span>{% endfor %}</div>
-      {% if it.synopsis %}
+      {% if it.needs_tr %}
+      <div hx-get="/discover/summary?id={{ it.id | urlencode }}" hx-trigger="load delay:{{ loop.index0 * 250 }}ms" hx-swap="outerHTML">
+        <p class="syn">{{ it.short }}</p><small class="mut">traduction en cours…</small>
+      </div>
+      {% elif it.synopsis %}
       <p class="syn">{{ it.short }}</p>
       {% if it.short != it.synopsis %}<details><summary>Lire la suite</summary><p class="syn">{{ it.synopsis }}</p></details>{% endif %}
       {% else %}<p class="syn mut">Pas de synopsis.</p>{% endif %}

@@ -170,12 +170,26 @@ def tag_list(session, api=MD_API):
     return sorted(out, key=lambda x: (x["group"], x["label"].lower()))
 
 
+def clean_synopsis(text):
+    """Retire la mise en forme Markdown et les sections de liens que MangaDex ajoute souvent."""
+    text = (text or "").replace("\r", "")
+    head, sep, tail = text.partition("\n---")
+    if sep and len(head.strip()) > 40:
+        text = head
+    text = re.sub(r"!?\[([^\]]*)\]\([^)]*\)", r"\1", text)
+    text = re.sub(r"[*_`]{1,3}", "", text)
+    text = re.sub(r"^\s*[-=]{3,}\s*$", "", text, flags=re.M)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
 def _normalize(d):
     a = d["attributes"]
+    desc = a.get("description") or {}
+    lang = next((l for l in ("fr", "en") if desc.get(l)), next((l for l, v in desc.items() if v), None))
     tags = [FR_TAGS.get(n, n) for t in a.get("tags", []) if t["attributes"].get("group") in ("genre", "theme")
             for n in [_pick(t["attributes"].get("name", {}), "en")]]
     return {"id": d["id"], "title": _pick(a.get("title", {}), "fr", "en"),
-            "synopsis": (_pick(a.get("description", {}), "fr", "en") or "").strip(),
+            "synopsis": clean_synopsis(desc.get(lang) if lang else ""), "synopsis_lang": (lang or "en").split("-")[0],
             "year": a.get("year"), "status": a.get("status"), "type": a.get("originalLanguage"),
             "demographic": a.get("publicationDemographic"), "rating": a.get("contentRating"),
             "tags": tags, "cover_url": _cover_url(d), "last_chapter": a.get("lastChapter")}
@@ -205,3 +219,9 @@ def discover(session, api=MD_API, q="", tags=(), all_tags=True, origin="", statu
     params.append((f"order[{key}]", ORDERS[key][1]))
     data = _cached_get(session, f"{api}/manga", params, 600)
     return [_normalize(d) for d in data.get("data", [])], data.get("total", 0)
+
+
+def one(session, api, md_id):
+    """Fiche d'un manga (normalisée), via le cache."""
+    data = _cached_get(session, f"{api}/manga/{md_id}", [("includes[]", "cover_art")], 600)
+    return _normalize(data["data"])

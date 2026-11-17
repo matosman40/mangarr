@@ -4,6 +4,26 @@
 <h1>Réglages</h1>
 {% if saved %}<p class="oktxt">✅ Réglages enregistrés.</p>{% endif %}
 
+<h2>Traduction des résumés</h2>
+<form method="post" action="/settings/translation" class="stack">
+  <label>Service
+    <select name="provider">{% for k, label in providers.items() %}<option value="{{ k }}" {{ 'selected' if k == values.tr_provider }}>{{ label }}</option>{% endfor %}</select>
+  </label>
+  <div class="row">
+    <label>Adresse LibreTranslate <input name="tr_url" value="{{ values.tr_url }}" placeholder="http://192.168.1.10:5000"></label>
+    <label>Clé d'API (optionnelle) <input name="tr_key" placeholder="{{ 'enregistrée : laisser vide pour conserver' if values.tr_key_set else '' }}" autocomplete="off"></label>
+  </div>
+  <label class="check"><input type="checkbox" name="clear_tr_key"> Supprimer la clé</label>
+  <div class="actions">
+    <button class="btn primary">Enregistrer</button>
+    <button type="button" class="btn" hx-post="/settings/translation/test" hx-target="#trtest">Tester la traduction</button>
+  </div>
+  <div id="trtest"></div>
+  <p class="hint">Les résumés sans version française sont traduits une seule fois puis gardés en cache. MyMemory est gratuit mais limité
+  par jour ; pour un usage régulier, hébergez <a href="https://libretranslate.com" target="_blank" rel="noopener noreferrer">LibreTranslate</a>
+  sur votre serveur (aucune donnée ne sort de chez vous).</p>
+</form>
+
 <h2>Notifications</h2>
 <form method="post" action="/settings/notifications" class="stack">
   <fieldset><legend>Discord</legend>
