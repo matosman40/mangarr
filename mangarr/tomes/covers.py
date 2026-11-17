@@ -2,6 +2,8 @@
 import os
 import re
 import shutil
+import threading
+import time
 from zipfile import ZipFile
 
 from mangarr.core.net import fetch_image, sniff_image_ext
@@ -64,4 +66,136 @@ def store_md_cover(ctx, mid, url):
     with open(path, "wb") as f:
         f.write(data)
     ctx.repo.update_manga(mid, cover=path)
+    return True
+
+
+# --------------------------------------------------------------------------- #
+# Jaquettes manquantes : on les complète automatiquement
+# --------------------------------------------------------------------------- #
+LOCAL_NAMES = ("cover.jpg", "cover.jpeg", "cover.png", "cover.webp", "folder.jpg", "folder.png", "poster.jpg")
+IMAGE_EXT = (".jpg", ".jpeg", ".png", ".webp")
+_RUN = threading.Lock()
+_LAST = {"t": 0.0}
+MIN_INTERVAL = 120          # secondes entre deux passes automatiques
+
+
+def _dirs(ctx, m):
+    tomes = m.get("tomes_folder") or os.path.join(ctx.settings.library_dir, m["name"])
+    chapters = m.get("folder") or os.path.join(ctx.settings.chapters_dir, m["name"])
+    return [tomes, chapters]
+
+
+def _local_file(dirs):
+    """Jaquette déjà présente dans le dossier (Komga, Kavita, ancien script…)."""
+    for d in dirs:
+        for n in LOCAL_NAMES:
+            p = os.path.join(d, n)
+            try:
+                with open(p, "rb") as f:
+                    data = f.read(8 * 1024 * 1024)
+            except OSError:
+                continue
+            if sniff_image_ext(data):
+                return data
+    return None
+
+
+def _first_archive_image(dirs):
+    """Première page du plus petit tome (ou chapitre) disponible."""
+    from mangarr import library_scan
+    for d in dirs:
+        if not os.path.isdir(d):
+            continue
+        files = [f for f in os.listdir(d) if f.lower().endswith((".cbz", ".zip"))]
+        files.sort(key=lambda f: (library_scan.volume_number(f) is None, library_scan.volume_number(f) or 0, f.lower()))
+        for f in files[:3]:
+            try:
+                with ZipFile(os.path.join(d, f)) as z:
+                    names = sorted(n for n in z.namelist() if n.lower().endswith(IMAGE_EXT))
+                    data = z.read(names[0]) if names else None
+            except (OSError, ValueError, KeyError):
+                continue
+            if data and sniff_image_ext(data):
+                return data
+    return None
+
+
+def _md_url_for_name(ctx, m):
+    """Jaquette MangaDex retrouvée par le nom du manga (titre suffisamment proche)."""
+    from mangarr.titles import score
+    try:
+        items, _ = mangadex.discover(ctx.fast_session, ctx.settings.mangadex_api, q=m["name"].replace("_", " "),
+                                     order="relevance", limit=5)
+    except Exception:
+        return None
+    best = max(items, key=lambda it: max((score(t, m["name"]) for t in [it["title"]] + it["alt_titles"]), default=0),
+               default=None)
+    if best and max(score(t, m["name"]) for t in [best["title"]] + best["alt_titles"]) >= 0.88:
+        return best["cover_url"]
+    return None
+
+
+def _save(ctx, m, data):
+    os.makedirs(ctx.settings.covers_dir, exist_ok=True)
+    path = os.path.join(ctx.settings.covers_dir, f"{m['id']}.jpg")
+    with open(path, "wb") as f:
+        f.write(data)
+    ctx.repo.update_manga(m["id"], cover=path)
+
+
+def fill_missing(ctx, limit=30):
+    """Donne une jaquette à chaque manga qui n'en a pas. Retourne le nombre de jaquettes ajoutées.
+
+    Ordre : fichier de jaquette du dossier, jaquette MangaDex (id connu), première page d'un tome/chapitre,
+    puis jaquette MangaDex retrouvée par le nom.
+    """
+    done = 0
+    for m in ctx.repo.list_mangas():
+        if done >= limit:
+            break
+        if m.get("cover") and os.path.isfile(m["cover"]):
+            continue
+        dirs = _dirs(ctx, m)
+        data = _local_file(dirs)
+        if data:
+            _save(ctx, m, data)
+            done += 1
+            continue
+        md_id = m["params"].get("mangadex_id")
+        if md_id:
+            try:
+                url = mangadex.cover_url(ctx.fast_session, md_id, ctx.settings.mangadex_api)
+                if url and store_md_cover(ctx, m["id"], url):
+                    done += 1
+                    continue
+            except Exception:
+                pass
+        data = _first_archive_image(dirs)
+        if data:
+            _save(ctx, m, data)
+            done += 1
+            continue
+        if not md_id:
+            url = _md_url_for_name(ctx, m)
+            if url and store_md_cover(ctx, m["id"], url):
+                done += 1
+    return done
+
+
+def ensure_async(ctx, force=False):
+    """Lance `fill_missing` en arrière-plan si des jaquettes manquent (au plus une passe toutes les 2 min)."""
+    if _RUN.locked() or (not force and time.time() - _LAST["t"] < MIN_INTERVAL):
+        return False
+    if all(m.get("cover") and os.path.isfile(m["cover"]) for m in ctx.repo.list_mangas()):
+        return False
+    _LAST["t"] = time.time()
+
+    def work():
+        with _RUN:
+            try:
+                fill_missing(ctx)
+            except Exception as e:
+                ctx.repo.add_log("warn", f"jaquettes : {type(e).__name__}")
+
+    threading.Thread(target=work, daemon=True, name="covers-fill").start()
     return True

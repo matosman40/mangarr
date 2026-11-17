@@ -120,6 +120,10 @@ def main(argv=None):
         from mangarr.web.app import create_app
         sched = Scheduler(ctx)
         sched.start()
+        from mangarr import catalog
+        from mangarr.tomes import covers
+        catalog.refresh_async(ctx, stale_only=True)      # lecture des catalogues des sources au démarrage
+        covers.ensure_async(ctx, force=True)
         if not os.environ.get("MANGARR_PASSWORD"):
             print("⚠️ MANGARR_PASSWORD non défini : l'interface est ouverte à tous. Ne l'exposez pas sur Internet.")
         uvicorn.run(create_app(ctx, sched), host=os.environ.get("MANGARR_HOST", "0.0.0.0"),

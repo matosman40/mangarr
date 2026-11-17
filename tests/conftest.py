@@ -77,7 +77,9 @@ def settings(tmp_path):
 
 @pytest.fixture
 def ctx(settings):
-    return Context(settings, echo=None)
+    c = Context(settings, echo=None)
+    c.repo.set_setting("discover_only_sources", False)     # les tests « Découvrir » historiques lisent tout MangaDex
+    return c
 
 
 @pytest.fixture(autouse=True)
@@ -115,4 +117,16 @@ def no_external_cover_download(monkeypatch):
     from mangarr.tomes import covers
     calls = []
     monkeypatch.setattr(covers, "store_md_cover", lambda ctx, mid, url: calls.append((mid, url)) or False)
+    return calls
+
+
+@pytest.fixture(autouse=True)
+def no_background_work(monkeypatch):
+    """Aucun fil d'arrière-plan pendant les tests : les appels sont simplement enregistrés."""
+    from mangarr import catalog
+    from mangarr.tomes import covers
+    calls = {"catalog": [], "covers": []}
+    monkeypatch.setattr(catalog, "refresh_async", lambda ctx, only=None, stale_only=False: calls["catalog"].append(only) or True)
+    monkeypatch.setattr(covers, "ensure_async", lambda ctx, force=False: calls["covers"].append(force) or True)
+    monkeypatch.setattr(catalog, "PAUSE", 0)
     return calls

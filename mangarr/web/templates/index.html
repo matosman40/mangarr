@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Mangas suivis</h1>
+{% if retried %}<p class="{{ 'oktxt' if found else 'warntxt' }}">{{ found }} source(s) trouvée(s) sur {{ retried }} manga(s) à configurer.</p>{% endif %}
+{% if setup_count %}<form method="post" action="/retry-sources" class="box warnbox" style="margin-bottom:1rem">
+  ⚠️ {{ setup_count }} manga(s) « à configurer » (source introuvable à l'ajout).
+  <button class="btn">Réessayer la recherche de source pour tous</button>
+</form>{% endif %}
 <div id="grid" hx-get="/grid" hx-trigger="every 10s" hx-swap="innerHTML">
   {% include "_grid.html" %}
 </div>

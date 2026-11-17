@@ -3,7 +3,8 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from difflib import SequenceMatcher
 
-from mangarr import library_scan
+from mangarr import catalog, library_scan
+from mangarr.titles import norm, score  # noqa: F401  (réexportés)
 from mangarr.core.net import ChapterMissing, FetchError
 from mangarr.core.util import clean_name
 from mangarr.sources import instantiate, searchable_names
@@ -19,17 +20,6 @@ MAX_TITLES = 4
 def needs_setup(manga, state):
     """Manga créé automatiquement mais incomplet (suspendu avec un message de configuration)."""
     return (not manga["enabled"]) and (state or {}).get("last_message") in SETUP_MESSAGES
-
-
-def norm(title):
-    return re.sub(r"[\W_]+", "", (title or "").casefold())
-
-
-def score(a, b):
-    a, b = norm(a), norm(b)
-    if not a or not b:
-        return 0.0
-    return 1.0 if a == b else SequenceMatcher(None, a, b).ratio()
 
 
 def best_result(results, titles):
@@ -59,10 +49,16 @@ def _search_source(ctx, name, titles):
 
 
 def find_source(ctx, titles):
-    """(source, slug, titre du site, score) de la meilleure correspondance, ou None."""
+    """(source, slug, titre du site, score) de la meilleure correspondance, ou None.
+
+    Le catalogue local (instantané) est consulté d'abord ; sinon recherche en direct sur chaque site.
+    """
     names = searchable_names()
     if not names or not titles:
         return None
+    known = catalog.match(ctx, titles)
+    if known:
+        return known[0], known[1], known[2], 1.0
     with ThreadPoolExecutor(max_workers=min(6, len(names))) as pool:
         found = [f for f in pool.map(lambda n: _search_source(ctx, n, titles), names) if f[2]]
     if not found:
@@ -200,3 +196,24 @@ def describe(res):
     if res["local"]:
         return "ok", f"Dossier existant repris : suite après le chapitre {res['resume']} ({res['source']})."
     return "ok", f"Ajouté — source {res['source']}."
+
+
+def retry_source(ctx, manga):
+    """Nouvelle recherche de source pour un manga « à configurer ». Retourne (trouvé, message)."""
+    params = dict(manga["params"])
+    titles = [t for t in (params.get("mangadex_title"), manga["name"].replace("_", " "), manga["name"]) if t]
+    match = find_source(ctx, list(dict.fromkeys(titles)))
+    if not match:
+        names = searchable_names()
+        return False, ("aucune source ne propose ce manga (sources interrogées : " + ", ".join(names) + ")") \
+            if names else "aucune source avec recherche : configurez-en une dans Sources"
+    source, slug, _, _ = match
+    params["slug"] = slug
+    state = ctx.repo.get_state(manga["id"])
+    fields = {"source": source, "params": params}
+    if state.get("last_message") == SETUP_MESSAGE:      # il ne manquait que la source : le suivi peut démarrer
+        fields["enabled"] = True
+        ctx.repo.set_status(manga["id"], "ok", "")
+    ctx.repo.update_manga(manga["id"], **fields)
+    ctx.repo.add_log("info", f"Source trouvée pour « {manga['name']} » : {source} ({slug})", manga["id"])
+    return True, f"source {source} (slug {slug})"

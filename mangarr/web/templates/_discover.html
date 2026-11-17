@@ -1,6 +1,6 @@
 {% if error %}<p class="errtxt box">{{ error }}</p>{% endif %}
-{% if offset == 0 %}<p class="hint">{{ total }} résultat(s).</p>{% endif %}
-{% if not items and not error and offset == 0 %}<p class="empty">Aucun manga ne correspond à ces filtres.</p>{% endif %}
+{% if offset == 0 and not error %}<p class="hint">{% if only_sources %}Mangas disponibles sur vos sources{% else %}{{ total }} résultat(s) dans MangaDex{% endif %}.</p>{% endif %}
+{% if not items and not error and offset == 0 and not more_url %}<p class="empty">Aucun manga ne correspond à ces filtres{% if only_sources %} sur vos sources (cochez « Afficher aussi les mangas absents de mes sources » pour élargir){% endif %}.</p>{% endif %}
 <div class="pgrid">
 {% for it in items %}
   <article class="poster" tabindex="0" role="button" aria-label="{{ it.title }}" data-title="{{ it.title }}" data-cover="{{ cover_src(it.cover_url) }}">
@@ -11,6 +11,7 @@
     <div class="pbadges">
       {% if it.type_label %}<span class="badge">{{ it.type_label }}</span>{% endif %}
       {% if it.followed %}<span class="badge ok">suivi</span>{% elif it.in_library %}<span class="badge ok">en bibliothèque</span>{% endif %}
+      {% if it.site %}<span class="badge">{{ it.site.source }}</span>{% endif %}
     </div>
     <div class="pcap"><strong>{{ it.title }}</strong><small>{{ it.year or '' }}{% if it.status_label %} · {{ it.status_label }}{% endif %}</small></div>
     <div class="pinfo">
@@ -37,5 +38,5 @@
 {% endfor %}
 </div>
 {% if more_url %}
-<div class="actions" hx-get="{{ more_url }}" hx-trigger="click" hx-swap="outerHTML"><button type="button" class="btn">Voir plus</button></div>
+<div class="actions more" hx-get="{{ more_url }}" hx-trigger="revealed, click" hx-swap="outerHTML" hx-indicator="this"><button type="button" class="btn">Chargement de la suite…</button></div>
 {% endif %}

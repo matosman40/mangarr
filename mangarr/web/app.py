@@ -13,7 +13,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from mangarr import __version__
+from urllib.parse import quote
+
+from starlette.concurrency import run_in_threadpool
+
+from mangarr import autoadd
 from mangarr.autoadd import needs_setup
+from mangarr.sources import searchable_names
+from mangarr.tomes import covers
 from mangarr.core.engine import RUN_LOCK, RunOptions, check_all
 from mangarr.tomes.plan import chapter_numbers
 from mangarr.web import discover, library, manage, settings_pages
@@ -148,21 +155,51 @@ def create_app(ctx, scheduler=None, password=None):
 
     # ---- pages ----
     @app.get("/", response_class=HTMLResponse)
-    def index(request: Request):
+    def index(request: Request, retried: int = 0, found: int = 0):
         mangas = [manga_view(ctx, m) for m in ctx.repo.list_mangas()]
-        return render(request, "index.html", mangas=mangas)
+        covers.ensure_async(ctx)          # les jaquettes manquantes se complètent toutes seules
+        return render(request, "index.html", mangas=mangas, retried=retried, found=found,
+                      setup_count=sum(1 for m in mangas if m["setup"]))
 
     @app.get("/grid", response_class=HTMLResponse)
     def grid(request: Request):
         mangas = [manga_view(ctx, m) for m in ctx.repo.list_mangas()]
+        covers.ensure_async(ctx)
         return render(request, "_grid.html", mangas=mangas)
 
-    @app.get("/manga/{mid}", response_class=HTMLResponse)
-    def detail(request: Request, mid: int):
+    @app.post("/covers/refresh")
+    def covers_refresh():
+        covers.ensure_async(ctx, force=True)
+        return RedirectResponse("/", status_code=303)
+
+    @app.post("/manga/{mid}/find-source")
+    async def find_source_again(mid: int):
         m = ctx.repo.get_manga(mid)
         if not m:
             return Response("Manga introuvable", status_code=404)
-        return render(request, "manga.html", m=manga_view(ctx, m), history=ctx.repo.history(mid, 50),
+        ok, msg = await run_in_threadpool(autoadd.retry_source, ctx, m)
+        return RedirectResponse(f"/manga/{mid}?src={'ok' if ok else 'ko'}&msg={quote(msg)}", status_code=303)
+
+    @app.post("/retry-sources")
+    async def retry_all_sources():
+        """Nouvelle recherche de source pour tous les mangas « à configurer »."""
+        def work():
+            tried = found = 0
+            for m in ctx.repo.list_mangas():
+                if needs_setup(m, ctx.repo.get_state(m["id"])):
+                    tried += 1
+                    found += 1 if autoadd.retry_source(ctx, m)[0] else 0
+            return tried, found
+        tried, found = await run_in_threadpool(work)
+        return RedirectResponse(f"/?retried={tried}&found={found}", status_code=303)
+
+    @app.get("/manga/{mid}", response_class=HTMLResponse)
+    def detail(request: Request, mid: int, msg: str = "", src: str = ""):
+        m = ctx.repo.get_manga(mid)
+        if not m:
+            return Response("Manga introuvable", status_code=404)
+        return render(request, "manga.html", m=manga_view(ctx, m), flash=msg, flash_ok=(src == "ok"),
+                      searched=searchable_names(), history=ctx.repo.history(mid, 50),
                       logs=ctx.repo.logs(60, mid), params=json.dumps(m["params"], indent=2, ensure_ascii=False))
 
     @app.get("/logs", response_class=HTMLResponse)

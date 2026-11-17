@@ -1,0 +1,15 @@
+{% if not names %}
+<p class="empty">Aucune source avec recherche n'est configurée : <a href="/sources">configurez la recherche d'une source</a> pour voir ici ses mangas.</p>
+{% elif running %}
+<div class="empty" hx-get="/discover/results?{{ poll }}" hx-trigger="every 3s" hx-swap="outerHTML">
+  ⏳ Lecture des catalogues de vos sources… {% if state.source %}<strong>{{ state.source }}</strong> : {{ state.titles }} titre(s), {{ state.pages }} page(s) lues.{% endif %}
+  <br><small>Première utilisation seulement : les listes sont ensuite gardées et mises à jour automatiquement.</small>
+</div>
+{% else %}
+<div class="empty">
+  <p>Aucun titre n'a pu être lu dans les catalogues de vos sources.</p>
+  {% for st in status if st.error %}<p class="errtxt">{{ st.source }} : {{ st.error }}</p>{% endfor %}
+  <p><a href="/sources">Vérifier la recherche des sources</a> · ou affichez le catalogue MangaDex complet avec « Afficher aussi les mangas absents de mes sources ».</p>
+  <form method="post" action="/catalog/refresh"><button class="btn">Réessayer</button></form>
+</div>
+{% endif %}

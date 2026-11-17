@@ -7,7 +7,13 @@
   </div>
   <div>
     <h1>{{ m.name.replace('_', ' ') }}</h1>
-    {% if m.setup %}<p class="box warnbox">⚠️ {{ m.state.last_message }}. <a href="/manga/{{ m.id }}/edit">Modifier</a> pour terminer la configuration, puis cochez « Suivi actif ».</p>{% endif %}
+    {% if flash %}<p class="{{ 'oktxt' if flash_ok else 'errtxt' }}">{{ flash }}</p>{% endif %}
+    {% if m.setup %}<div class="box warnbox">⚠️ {{ m.state.last_message }}.
+      {% if searched %}<br><small>Sources interrogées : {{ searched | join(', ') }}. Le manga n'est peut-être pas proposé par ces sites.</small>{% endif %}
+      <div class="actions">
+        <form method="post" action="/manga/{{ m.id }}/find-source"><button class="btn primary">Chercher la source à nouveau</button></form>
+        <a class="btn" href="/manga/{{ m.id }}/edit">Choisir la source à la main</a>
+      </div></div>{% endif %}
     <dl>
       <dt>Source</dt><dd>{{ m.source }}</dd>
       <dt>Dernier chapitre</dt><dd>{{ m.state.last_chapter or '–' }}</dd>

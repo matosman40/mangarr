@@ -18,5 +18,16 @@
     {% endif %}</td></tr>
   {% endfor %}
 </table>
+<h2>Catalogue des sources</h2>
+<p class="hint">Mangarr lit la liste des titres de chaque source pour ne vous proposer, dans <a href="/discover">Découvrir</a>, que des mangas
+réellement disponibles chez vous (mise à jour automatique toutes les 24 h).</p>
+<table>
+  <tr><th>Source</th><th>Titres</th><th>Dernière lecture</th><th>État</th><th></th></tr>
+  {% for st in catalog_status %}
+  <tr><td>{{ st.source }}</td><td>{{ st.count }}</td><td>{{ fmt_ts(st.refreshed) if st.refreshed else 'jamais' }}</td>
+    <td>{% if st.error %}<span class="errtxt">{{ st.error }}</span>{% elif crawl.running and crawl.source == st.source %}⏳ lecture…{% else %}ok{% endif %}</td>
+    <td><form method="post" action="/catalog/refresh" style="display:inline"><input type="hidden" name="source" value="{{ st.source }}"><button class="btn">Actualiser</button></form></td></tr>
+  {% else %}<tr><td colspan="5" class="empty">Aucune source avec recherche : configurez-en une ci-dessus.</td></tr>{% endfor %}
+</table>
 <p class="hint">Sites complexes : déposez un module <code>.py</code> dans <code>{{ plugins_dir }}</code>, puis « Recharger les plugins » (voir <code>plugins_example/</code> dans le dépôt).</p>
 {% endblock %}

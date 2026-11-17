@@ -4,6 +4,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from starlette.concurrency import run_in_threadpool
 
 from mangarr import autoadd, library_scan
+from mangarr.tomes import covers
 
 BULK_LIMIT = 25      # une série = une recherche MangaDex + une recherche par site : on limite chaque passage
 
@@ -25,6 +26,7 @@ def register(app, ctx, render):
         if not series:
             return Response("série introuvable ou déjà suivie", status_code=404)
         res = await run_in_threadpool(autoadd.adopt_folder, ctx, series, api())
+        covers.ensure_async(ctx, force=True)
         return RedirectResponse(f"/manga/{res['id']}", status_code=303)
 
     @app.post("/library/adopt-all")
@@ -41,4 +43,5 @@ def register(app, ctx, render):
             return len(batch)
 
         n = await run_in_threadpool(work)
+        covers.ensure_async(ctx, force=True)
         return RedirectResponse(f"/library?done={n}&left={rest}", status_code=303)

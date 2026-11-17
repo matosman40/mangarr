@@ -4,6 +4,13 @@
 <h1>Réglages</h1>
 {% if saved %}<p class="oktxt">✅ Réglages enregistrés.</p>{% endif %}
 
+<h2>Découvrir</h2>
+<form method="post" action="/settings/discover" class="stack">
+  <label class="check"><input type="checkbox" name="only_sources" {{ 'checked' if values.only_sources }}> Ne proposer que les mangas disponibles sur mes sources</label>
+  <p class="hint">Mangarr lit le catalogue de chaque source (voir la page <a href="/sources">Sources</a>) et le croise avec MangaDex.</p>
+  <div class="actions"><button class="btn primary">Enregistrer</button></div>
+</form>
+
 <h2>Ajout automatique</h2>
 <form method="post" action="/settings/autoadd" class="stack">
   <label>Pour un manga qui n'est pas encore dans vos dossiers, commencer au

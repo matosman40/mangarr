@@ -57,6 +57,24 @@ MIGRATIONS = [
         value TEXT NOT NULL
     );
     """,
+    # 2 : catalogue des sources (titres disponibles sur chaque site)
+    """
+    CREATE TABLE catalog (
+        source TEXT NOT NULL,
+        slug TEXT NOT NULL,
+        title TEXT NOT NULL,
+        norm TEXT NOT NULL,
+        cover TEXT,
+        PRIMARY KEY (source, slug)
+    );
+    CREATE INDEX catalog_norm ON catalog(norm);
+    CREATE TABLE catalog_meta (
+        source TEXT PRIMARY KEY,
+        refreshed REAL,
+        count INTEGER NOT NULL DEFAULT 0,
+        error TEXT
+    );
+    """,
 ]
 
 
@@ -89,6 +107,16 @@ class Database:
     def execute(self, sql, params=()):
         with self._lock:
             return self.conn.execute(sql, params)
+
+    def executemany(self, sql, rows):
+        with self._lock:
+            self.conn.execute("BEGIN")
+            try:
+                self.conn.executemany(sql, rows)
+                self.conn.execute("COMMIT")
+            except Exception:
+                self.conn.execute("ROLLBACK")
+                raise
 
     def query(self, sql, params=()):
         with self._lock:

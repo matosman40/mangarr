@@ -67,7 +67,7 @@ def test_no_site_found_creates_manga_to_configure(client, ctx, server):
     assert res["created"] and not res["found"] and not res["enabled"] and "Modifier" in res["message"]
     m = ctx.repo.get_manga(res["id"])
     assert not m["enabled"] and ctx.repo.get_state(m["id"])["last_message"] == autoadd.SETUP_MESSAGE
-    assert "à configurer" in client.get("/grid").text and "terminer la configuration" in client.get(res["url"]).text
+    assert "à configurer" in client.get("/grid").text and "Chercher la source à nouveau" in client.get(res["url"]).text and "Sources interrogées : lelscanfr" in client.get(res["url"]).text
     assert 'name="enabled" checked' in client.get(f"{res['url']}/edit").text       # préchoisi pour finir la config
 
 

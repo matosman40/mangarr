@@ -5,10 +5,11 @@ import re
 import time
 from urllib.parse import quote, urlparse
 
-from fastapi import Request, UploadFile
+from fastapi import Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from starlette.concurrency import run_in_threadpool
 
+from mangarr import catalog
 from mangarr.autoadd import needs_setup
 from mangarr.core.util import clean_name
 from mangarr.core.net import ChapterMissing, FetchError, fetch_image, sniff_image_ext
@@ -342,7 +343,12 @@ def register(app, ctx, render):
     @app.get("/sources", response_class=HTMLResponse)
     def sources_page(request: Request):
         return render(request, "sources.html", rows=source_rows(), errors=ctx.plugin_errors,
-                      plugins_dir=ctx.settings.plugins_dir)
+                      plugins_dir=ctx.settings.plugins_dir, catalog_status=catalog.status(ctx), crawl=catalog.STATE)
+
+    @app.post("/catalog/refresh")
+    async def catalog_refresh(source: str = Form("")):
+        catalog.refresh_async(ctx, only=source if source in SOURCES else None)
+        return RedirectResponse("/sources", status_code=303)
 
     def src_form_ctx(v, error=None, existing=False):
         kind = v.get("kind", "html")
@@ -435,7 +441,7 @@ def register(app, ctx, render):
             return Response("Source introuvable", status_code=404)
         if any(m["source"] == name for m in repo.list_mangas()):
             return render(request, "sources.html", status_code=409, rows=source_rows(), errors=ctx.plugin_errors,
-                          plugins_dir=ctx.settings.plugins_dir,
+                          plugins_dir=ctx.settings.plugins_dir, catalog_status=catalog.status(ctx), crawl=catalog.STATE,
                           flash=f"« {name} » est utilisée par des mangas : modifiez-les d'abord.")
         repo.delete_custom_source(name)
         SOURCES.pop(name, None)

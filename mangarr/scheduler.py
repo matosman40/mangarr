@@ -1,7 +1,9 @@
 """Planificateur intégré (APScheduler) : vérification périodique, intervalle réglable."""
 from apscheduler.schedulers.background import BackgroundScheduler
 
+from mangarr import catalog
 from mangarr.core.engine import RunOptions, check_all
+from mangarr.tomes import covers
 
 JOB_ID = "check_all"
 
@@ -22,6 +24,9 @@ class Scheduler:
     def start(self):
         self.sched.start()
         self.reschedule()
+        # catalogues des sources (24 h) et jaquettes manquantes : indépendants de l'intervalle de vérification
+        self.sched.add_job(lambda: catalog.refresh(self.ctx, stale_only=True), "interval", hours=12, id="catalog")
+        self.sched.add_job(lambda: covers.fill_missing(self.ctx), "interval", hours=6, id="covers")
 
     def reschedule(self):
         minutes = self.interval()

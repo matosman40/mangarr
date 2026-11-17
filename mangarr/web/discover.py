@@ -10,7 +10,9 @@ from starlette.concurrency import run_in_threadpool
 
 from collections import OrderedDict
 
-from mangarr import autoadd, library_scan, translate
+from mangarr import autoadd, catalog, library_scan, translate
+from mangarr.sources import searchable_names
+from mangarr.titles import norm
 from mangarr.core.net import MD_HEADERS, sniff_image_ext
 from mangarr.tomes import mangadex
 
@@ -20,7 +22,10 @@ COVER_PATH = re.compile(r"^/covers/[0-9a-fA-F-]{36}/[A-Za-z0-9._-]{1,120}$")
 MAX_COVER = 5 * 1024 * 1024
 MIME = {".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".gif": "image/gif"}
 
-PAGE = 24
+PAGE_ALL = 48          # sans filtre sur les sources : une page d'un seul bloc
+BATCH = 100            # fiches MangaDex lues par lot pour trouver celles qui existent sur vos sources
+MAX_ROUNDS = 4
+TARGET = 24            # nombre de mangas visé par chargement
 SYNOPSIS_SHORT = 240
 UUID = re.compile(r"^[0-9a-fA-F-]{36}$")
 SYN_CACHE = OrderedDict()      # id -> (synopsis, langue) : évite de recharger l'API pour chaque traduction
@@ -60,26 +65,63 @@ def register(app, ctx, render):
 
     @app.get("/discover/results", response_class=HTMLResponse)
     async def discover_results(request: Request, q: str = "", origin: str = "", order: str = "auto",
-                               offset: int = 0, fr: str = "", adult: str = "", any_tag: str = ""):
+                               offset: int = 0, fr: str = "", adult: str = "", any_tag: str = "", all: str = ""):
         qp = request.query_params
         tags, status, demo = qp.getlist("tag"), qp.getlist("status"), qp.getlist("demo")
         offset = max(0, min(offset, 9900))
         if order == "auto":      # une recherche par titre se trie par pertinence, le catalogue par dernières sorties
             order = "relevance" if q.strip() else "latestUploadedChapter"
+        only_sources = bool(repo.get_setting("discover_only_sources", True)) and not all
+
+        if only_sources and catalog.total(ctx) == 0:      # catalogues des sources pas encore lus
+            names = searchable_names()
+            if names:
+                catalog.refresh_async(ctx)
+            status = catalog.status(ctx)
+            waiting = catalog.STATE["running"] or catalog.LOCK.locked() or any(st["refreshed"] is None for st in status)
+            return render(request, "_discover_wait.html", names=names, running=bool(names) and waiting,
+                          state=catalog.STATE, status=status, poll=request.url.query)
+
+        def fetch(pos, limit):
+            return mangadex.discover(ctx.fast_session, api(), q=q.strip(), tags=tags, all_tags=not any_tag,
+                                     origin=origin, status=status, demo=demo, order=order, fr=bool(fr),
+                                     adult=bool(adult), offset=pos, limit=limit)
+
+        def gather():
+            """Lit le catalogue MangaDex par lots jusqu'à trouver assez de titres présents sur vos sources."""
+            idx = catalog.index(ctx) if only_sources else None
+            found, pos, total = [], offset, 0
+            for _ in range(MAX_ROUNDS if only_sources else 1):
+                limit = min(BATCH if only_sources else PAGE_ALL, 10000 - pos)
+                if limit <= 0:
+                    break
+                items, total = fetch(pos, limit)
+                if not items:               # plus rien à lire : fin du catalogue pour ces filtres
+                    pos = max(pos, total)
+                    break
+                pos += len(items)
+                for it in items:
+                    if idx is not None:
+                        hit = next((idx[n] for t in [it["title"]] + it["alt_titles"] if (n := norm(t)) in idx), None)
+                        if not hit:
+                            continue
+                        it["site"] = {"source": hit[0], "slug": hit[1]}
+                    found.append(it)
+                if len(found) >= TARGET or pos >= min(total, 10000):
+                    break
+            return found, pos, total
+
         try:
-            items, total = await run_in_threadpool(
-                lambda: mangadex.discover(ctx.fast_session, api(), q=q.strip(), tags=tags, all_tags=not any_tag,
-                                          origin=origin, status=status, demo=demo, order=order, fr=bool(fr),
-                                          adult=bool(adult), offset=offset, limit=PAGE))
+            items, pos, total = await run_in_threadpool(gather)
         except Exception as e:
             return render(request, "_discover.html", items=[], error=f"MangaDex injoignable : {type(e).__name__}",
-                          more_url=None, total=0, offset=offset)
+                          more_url=None, total=0, offset=offset, only_sources=only_sources)
         mine = followed_ids()
-        shelf = library_scan.index_by_norm(library_scan.scan(ctx), autoadd.norm)
+        shelf = library_scan.index_by_norm(library_scan.scan(ctx), norm)
         auto_translate = translate.get_config(repo)["provider"] != "none"
         for it in items:
             it["followed"] = it["id"] in mine
-            it["in_library"] = any(autoadd.norm(t) in shelf for t in [it["title"]] + it["alt_titles"])
+            it["in_library"] = any(norm(t) in shelf for t in [it["title"]] + it["alt_titles"])
             it["short"] = shorten(it["synopsis"])
             it["needs_tr"] = bool(it["synopsis"]) and it["synopsis_lang"] != "fr" and auto_translate
             known = translate.cached(ctx, it["synopsis"], it["synopsis_lang"]) if it["needs_tr"] else None
@@ -89,13 +131,12 @@ def register(app, ctx, render):
                 remember(it)
             it["type_label"] = mangadex.TYPES.get(it["type"], "")
             it["status_label"] = mangadex.STATUSES.get(it["status"], "")
-        nxt = offset + PAGE
         more_url = None
-        if nxt < min(total, 10000):
+        if pos < min(total, 10000):
             more_url = "/discover/results?" + urlencode(
-                [(k, v) for k, v in qp.multi_items() if k != "offset"] + [("offset", nxt)])
+                [(k, v) for k, v in qp.multi_items() if k != "offset"] + [("offset", pos)])
         return render(request, "_discover.html", items=items, error=None, more_url=more_url, total=total,
-                      offset=offset)
+                      offset=offset, only_sources=only_sources)
 
     @app.post("/discover/follow")
     async def discover_follow(request: Request):

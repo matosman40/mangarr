@@ -36,6 +36,7 @@
     {% for k, label in demos.items() %}<label class="chip"><input type="checkbox" name="demo" value="{{ k }}"> {{ label }}</label>{% endfor %}
     <label class="chip"><input type="checkbox" name="fr" value="1"> Disponible en français</label>
     <label class="chip"><input type="checkbox" name="adult" value="1"> Contenu adulte</label>
+    <label class="chip" title="Par défaut, seuls les mangas présents sur vos sources sont proposés"><input type="checkbox" name="all" value="1"> Afficher aussi les mangas absents de mes sources</label>
   </div>
   {% if tags %}
   <details class="tagbox">
