@@ -65,3 +65,13 @@ def settings(tmp_path):
 @pytest.fixture
 def ctx(settings):
     return Context(settings, echo=None)
+
+
+@pytest.fixture(autouse=True)
+def isolated_source_registry():
+    """Le registre des sources est global : on le restaure après chaque test."""
+    from mangarr.sources import SOURCES
+    saved = dict(SOURCES)
+    yield
+    SOURCES.clear()
+    SOURCES.update(saved)
