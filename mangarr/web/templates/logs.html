@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Journaux · Mangarr{% endblock %}
+{% block content %}
+<h1>Journaux</h1>
+<form class="inline" method="post" action="/settings/interval">
+  <label>Vérification automatique toutes les <input type="number" name="minutes" min="0" value="{{ interval }}" required style="width:6em"> minutes (0 = désactivée)</label>
+  <button class="btn">Enregistrer</button>
+</form>
+<table class="logs" id="logs" hx-get="/logs/rows" hx-trigger="every 5s" hx-swap="innerHTML">
+  {% include "_logrows.html" %}
+</table>
+<h2>Derniers téléchargements</h2>
+<table>
+  <tr><th>Date</th><th>Manga</th><th>Type</th><th>N°</th><th>Pages</th></tr>
+  {% for h in history %}<tr><td>{{ fmt_ts(h.ts) }}</td><td>{{ names.get(h.manga_id, '') | replace('_', ' ') }}</td><td>{{ 'tome' if h.kind == 'tome' else 'chapitre' }}</td><td>{{ h.number }}</td><td>{{ h.pages or '' }}</td></tr>
+  {% else %}<tr><td colspan="5" class="empty">Rien pour l'instant.</td></tr>{% endfor %}
+</table>
+{% endblock %}

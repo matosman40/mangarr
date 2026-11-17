@@ -1,0 +1,11 @@
+.git
+.github
+tests
+config
+library
+data
+manga_dl.py
+*.db
+.env
+__pycache__
+.pytest_cache

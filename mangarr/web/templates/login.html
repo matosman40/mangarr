@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connexion · Mangarr</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="login">
+  <form method="post" action="/login" class="loginbox">
+    <h1>Mangarr</h1>
+    {% if error %}<p class="errtxt">{{ error }}</p>{% endif %}
+    <input type="password" name="password" placeholder="Mot de passe" autofocus required>
+    <button class="btn primary">Connexion</button>
+  </form>
+</body>
+</html>

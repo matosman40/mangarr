@@ -3,7 +3,7 @@ name = "mangarr"
 version = "0.1.0"
 description = "Téléchargeur de chapitres de manga, assemblage en tomes CBZ"
 requires-python = ">=3.12"
-dependencies = ["requests>=2.31", "apscheduler>=3.10,<4"]
+dependencies = ["requests>=2.31", "apscheduler>=3.10,<4", "fastapi>=0.110", "uvicorn>=0.29", "jinja2>=3.1", "python-multipart>=0.0.9"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

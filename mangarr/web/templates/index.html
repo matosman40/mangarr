@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Mangas suivis</h1>
+<div id="grid" hx-get="/grid" hx-trigger="every 10s" hx-swap="innerHTML">
+  {% include "_grid.html" %}
+</div>
+{% endblock %}

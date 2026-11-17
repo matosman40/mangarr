@@ -1,0 +1,21 @@
+{% if not mangas %}
+<p class="empty">Aucun manga suivi pour l'instant. Ajoutez-en avec <code>python -m mangarr add</code> (l'assistant d'ajout arrive dans la prochaine phase).</p>
+{% else %}
+<div class="grid">
+{% for m in mangas %}
+  <a class="card {{ 'off' if not m.enabled }}" href="/manga/{{ m.id }}">
+    <div class="cover">
+      {% if m.has_cover %}<img loading="lazy" src="/cover/{{ m.id }}" alt="">{% else %}<span>{{ m.name.replace('_', ' ')[:1] }}</span>{% endif %}
+      {% if not m.enabled %}<em class="badge">suspendu</em>
+      {% elif m.state.last_status == 'error' %}<em class="badge err">erreur</em>
+      {% elif m.state.last_status == 'ok' or m.state.last_status == 'missing' %}<em class="badge ok">à jour</em>{% endif %}
+    </div>
+    <div class="info">
+      <strong>{{ m.name.replace('_', ' ') }}</strong>
+      <small>{{ m.source }} · dernier ch. {{ m.state.last_chapter or '–' }}</small>
+      <small>{{ m.tomes_count }} tome(s){% if m.next_tome %} · {{ m.next_tome }}{% endif %}</small>
+    </div>
+  </a>
+{% endfor %}
+</div>
+{% endif %}

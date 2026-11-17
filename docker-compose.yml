@@ -1,0 +1,17 @@
+# Exemple (valeurs fictives) : adaptez les chemins. Compatible CasaOS (import de compose).
+services:
+  mangarr:
+    image: ghcr.io/matosman40/mangarr:latest
+    build: .
+    container_name: mangarr
+    restart: unless-stopped
+    user: "1000:1000"            # UID:GID propriétaire de vos dossiers
+    ports:
+      - "8080:8080"
+    environment:
+      TZ: Europe/Paris
+      MANGARR_PASSWORD: "changez-moi"      # laisser vide = interface sans mot de passe
+      MANGARR_CHECK_INTERVAL: "360"        # minutes (0 = désactivé)
+    volumes:
+      - ./library:/library       # tomes ; chapitres en cours dans /library/_chapters
+      - ./config:/config         # base SQLite, cache, jaquettes, plugins, exports Patreon

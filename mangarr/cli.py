@@ -1,6 +1,7 @@
 """Ligne de commande : python -m mangarr [run|list|sources|add|remove|daemon] ..."""
 import argparse
 import json
+import os
 import sys
 import time
 
@@ -8,7 +9,7 @@ from mangarr.core.config import load_settings
 from mangarr.core.engine import Context, RunOptions, check_all
 from mangarr.sources import SOURCES
 
-COMMANDS = {"run", "list", "sources", "add", "remove", "daemon"}
+COMMANDS = {"run", "list", "sources", "add", "remove", "daemon", "serve"}
 
 
 def parser():
@@ -36,6 +37,7 @@ def parser():
     rm = sub.add_parser("remove", help="supprimer un manga du suivi (les fichiers sont conservés)")
     rm.add_argument("name")
     sub.add_parser("daemon", help="planificateur seul (sans interface)")
+    sub.add_parser("serve", help="interface web + planificateur")
     return ap
 
 
@@ -92,6 +94,18 @@ def main(argv=None):
             return 2
         ctx.repo.delete_manga(m["id"])
         print(f"{m['name']} retiré du suivi")
+        return 0
+    if args.cmd == "serve":
+        import uvicorn
+        from mangarr.scheduler import Scheduler
+        from mangarr.web.app import create_app
+        sched = Scheduler(ctx)
+        sched.start()
+        if not os.environ.get("MANGARR_PASSWORD"):
+            print("⚠️ MANGARR_PASSWORD non défini : l'interface est ouverte à tous. Ne l'exposez pas sur Internet.")
+        uvicorn.run(create_app(ctx, sched), host=os.environ.get("MANGARR_HOST", "0.0.0.0"),
+                    port=settings.port, log_level="warning")
+        sched.stop()
         return 0
     if args.cmd == "daemon":
         from mangarr.scheduler import Scheduler

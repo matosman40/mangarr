@@ -1,0 +1,3 @@
+{% for l in logs %}
+<tr class="lv-{{ l.level }}"><td>{{ fmt_ts(l.ts) }}</td><td>{{ names.get(l.manga_id, '') | replace('_', ' ') }}</td><td>{{ l.message }}</td></tr>
+{% else %}<tr><td colspan="3" class="empty">Aucune entrée.</td></tr>{% endfor %}
