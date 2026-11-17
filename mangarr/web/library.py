@@ -14,14 +14,14 @@ def register(app, ctx, render):
 
     @app.get("/library", response_class=HTMLResponse)
     async def library_page(request: Request, done: int = 0, left: int = 0):
-        series = await run_in_threadpool(library_scan.scan, ctx)
+        series = await run_in_threadpool(library_scan.scan, ctx, True)
         return render(request, "library.html", series=series, done=done, left=left,
                       untracked=sum(1 for s in series if not s["tracked"]),
                       library_dir=ctx.settings.library_dir, chapters_dir=ctx.settings.chapters_dir)
 
     @app.post("/library/adopt")
     async def adopt(name: str = Form("")):
-        series = next((s for s in library_scan.scan(ctx) if s["name"] == name and not s["tracked"]), None)
+        series = next((s for s in library_scan.scan(ctx, fresh=True) if s["name"] == name and not s["tracked"]), None)
         if not series:
             return Response("série introuvable ou déjà suivie", status_code=404)
         res = await run_in_threadpool(autoadd.adopt_folder, ctx, series, api())
@@ -29,7 +29,7 @@ def register(app, ctx, render):
 
     @app.post("/library/adopt-all")
     async def adopt_all():
-        todo = [s for s in await run_in_threadpool(library_scan.scan, ctx) if not s["tracked"]]
+        todo = [s for s in await run_in_threadpool(library_scan.scan, ctx, True) if not s["tracked"]]
         batch, rest = todo[:BULK_LIMIT], max(0, len(todo) - BULK_LIMIT)
 
         def work():

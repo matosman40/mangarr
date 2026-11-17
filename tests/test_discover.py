@@ -150,3 +150,57 @@ def test_poster_wall_and_detail_dialog(client):
     r = client.get("/discover/results").text
     assert 'class="pgrid"' in r and 'class="poster"' in r and 'data-title="One Piece"' in r
     assert r.count('class="pinfo"') == 1 and 'class="pcap"' in r and "Suivre" in r
+
+
+# ------------------------------------------------------------------ rapidité et clarté de la recherche
+def test_search_sorts_by_relevance_and_catalogue_by_latest(client, server):
+    client.get("/discover/results")
+    assert "order[latestUploadedChapter]" in last_query(server)
+    client.get("/discover/results?q=blue+lock")
+    assert "order[relevance]" in last_query(server)
+    client.get("/discover/results?q=blue&order=rating")                   # un tri choisi par l'utilisateur est respecté
+    assert "order[rating]" in last_query(server)
+
+
+def test_search_bar_reset_and_single_trigger(client):
+    t = client.get("/discover").text
+    assert 'class="bigsearch"' in t and 'id="dreset"' in t and "Réinitialiser" in t and 'id="dload"' in t
+    assert t.count("hx-get=\"/discover/results\"") == 1                    # plus de double requête à la frappe
+    assert "catalogue MangaDex" in t and "Ajouter" in t                      # on explique ce que cherche la barre
+
+
+def test_grid_uses_light_thumbnails_and_modal_full_cover(client):
+    t = client.get("/discover/results").text
+    assert "c.jpg.256.jpg" in t.replace("%2F", "/").replace("%3A", ":") and 'data-cover="' in t
+    assert "c.jpg.512.jpg" in t.replace("%2F", "/").replace("%3A", ":")      # la fiche garde la version 512
+
+
+def test_translations_already_known_show_instantly(client, ctx, server):
+    from mangarr import translate
+    ctx.repo.set_setting("translation", {"provider": "libretranslate", "url": server.url})
+    server.add_json("/md/manga", {"data": [entry(1, desc={"en": "Plain English synopsis here."})], "total": 1})
+    assert "/discover/summary" in client.get("/discover/results").text
+    import hashlib, os
+    key = hashlib.sha1("en\0Plain English synopsis here.".encode()).hexdigest()
+    path = os.path.join(ctx.settings.cache_dir, "translations", key)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    open(path, "w", encoding="utf-8").write("Résumé déjà traduit.")
+    t = client.get("/discover/results?q=x").text
+    assert "Résumé déjà traduit." in t and "/discover/summary" not in t and "traduction en cours" not in t
+    assert translate.cached(ctx, "Plain English synopsis here.", "en") == "Résumé déjà traduit."
+    assert translate.cached(ctx, "Texte jamais traduit", "en") is None
+
+
+def test_library_scan_is_cached_briefly(ctx):
+    import os
+    from mangarr import library_scan
+    d = os.path.join(ctx.settings.library_dir, "Un_Manga")
+    os.makedirs(d)
+    open(os.path.join(d, "Un_Manga_T01.cbz"), "wb").close()
+    assert [x["name"] for x in library_scan.scan(ctx)] == ["Un_Manga"]
+    os.makedirs(os.path.join(ctx.settings.library_dir, "Autre"))
+    open(os.path.join(ctx.settings.library_dir, "Autre", "Autre_T01.cbz"), "wb").close()
+    assert [x["name"] for x in library_scan.scan(ctx)] == ["Un_Manga"]           # lecture récente réutilisée
+    assert sorted(x["name"] for x in library_scan.scan(ctx, fresh=True)) == ["Autre", "Un_Manga"]
+    ctx.repo.add_manga("Un_Manga", "pattern", {})
+    assert {x["name"]: x["tracked"] for x in library_scan.scan(ctx)}["Un_Manga"]      # l'état « suivi » reste à jour

@@ -3,15 +3,29 @@
 {% block content %}
 <h1>Découvrir des mangas</h1>
 {% if error %}<p class="errtxt box">{{ error }}</p>{% endif %}
-<form id="dform" class="filters" hx-get="/discover/results" hx-target="#dres" hx-trigger="change, submit, load" hx-indicator="#dres">
+<form id="dform" class="filters" hx-get="/discover/results" hx-target="#dres" hx-indicator="#dload"
+      hx-trigger="load, submit, change from:#dform select, change from:#dform input[type=checkbox], keyup changed delay:500ms from:#dform input[name=q]">
+  <div class="searchbar">
+    <input type="search" name="q" class="bigsearch" placeholder="Rechercher un manga par titre (catalogue MangaDex)…" autocomplete="off" autofocus>
+    <button class="btn primary">Rechercher</button>
+    <button type="button" class="btn" id="dreset" title="Effacer la recherche et tous les filtres">Réinitialiser</button>
+    <span id="dload" class="htmx-indicator">⏳ Chargement…</span>
+  </div>
+  <p class="hint">La recherche porte sur les titres (y compris les titres alternatifs). Les filtres s'appliquent tout de suite.
+  Pour chercher directement sur vos sites de lecture, utilisez <a href="/add">Ajouter</a>.</p>
   <div class="row3">
-    <label>Titre <input name="q" placeholder="Rechercher…" hx-trigger="keyup changed delay:500ms" hx-get="/discover/results" hx-target="#dres" hx-include="#dform"></label>
     <label>Trier par
-      <select name="order">{% for k, (label, _) in orders.items() if k != 'relevance' %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select>
+      <select name="order">
+        <option value="auto">Pertinence (recherche) ou dernières sorties</option>
+        {% for k, (label, _) in orders.items() if k not in ('relevance', 'latestUploadedChapter') %}<option value="{{ k }}">{{ label }}</option>{% endfor %}
+        <option value="latestUploadedChapter">Dernières sorties</option>
+        <option value="relevance">Pertinence</option>
+      </select>
     </label>
     <label>Type
       <select name="origin"><option value="">Tous</option>{% for k, label in types.items() %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select>
     </label>
+    <span></span>
   </div>
   <div class="chips">
     <span class="mut">Statut</span>
@@ -48,7 +62,7 @@
   function openCard(card) {
     var img = card.querySelector(".pcover img"), box = dlg.querySelector(".dimg");
     box.innerHTML = "";
-    if (img) { var c = document.createElement("img"); c.src = img.src; c.alt = ""; box.appendChild(c); }
+    if (img) { var c = document.createElement("img"); c.src = card.dataset.cover || img.src; c.alt = ""; box.appendChild(c); }
     dlg.querySelector(".dtitle").textContent = card.dataset.title;
     var info = dlg.querySelector(".dinfo");
     info.innerHTML = card.querySelector(".pinfo").innerHTML;      // HTML produit et échappé par le serveur
@@ -62,6 +76,15 @@
     if (e.target.closest(".poster a, .poster form")) return;      // « Suivre » : on ne touche pas à la fiche
     var card = e.target.closest(".poster");
     if (card) openCard(card);
+  });
+  ["htmx:responseError", "htmx:sendError", "htmx:timeout"].forEach(function (ev) {
+    document.body.addEventListener(ev, function (e) {          // la traduction n'aboutit pas : on le dit au lieu d'attendre
+      var el = e.detail && e.detail.elt;
+      if (el && el.classList && el.classList.contains("synwrap")) {
+        var note = el.querySelector("small");
+        if (note) note.textContent = "(traduction indisponible)";
+      }
+    });
   });
   document.addEventListener("submit", function (e) {
     var form = e.target.closest("form.follow");
@@ -85,6 +108,11 @@
         });
       })
       .catch(function () { btn.disabled = false; btn.textContent = "Réessayer"; });
+  });
+  document.getElementById("dreset").addEventListener("click", function () {
+    var f = document.getElementById("dform");
+    f.reset();
+    htmx.trigger(f, "submit");
   });
   document.addEventListener("keydown", function (e) {
     if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("poster")) {

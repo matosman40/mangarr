@@ -9,6 +9,7 @@ from mangarr import sources as src_registry
 from mangarr.core.config import Settings
 from mangarr.core.db import Database, Repo
 from mangarr.core.net import ChapterMissing, FetchError, make_session, sniff_image_ext
+from mangarr.core.util import permission_hint
 from mangarr.tomes import covers, mangadex
 from mangarr.tomes.plan import (_rm, build_tome, chapter_numbers, comicinfo_xml, plan_tomes,
                                 tome_is_valid)
@@ -50,6 +51,7 @@ class Context:
     def reload_sources(self):
         self.plugin_errors = src_registry.load_plugins(self.settings.plugins_dir, warn=lambda m: self.log("warn", m))
         src_registry.load_custom_sources(self.repo)
+        src_registry.load_overrides(self.repo)
 
     def log(self, level, msg, manga_id=None):
         self.echo(msg)
@@ -103,8 +105,9 @@ def download_chapter(ctx, source, manga, params, folder, chap, opts):
         return "missing", str(e)
     except Exception as e:
         _rm(tmp)
-        ctx.log("error", f"❌ {name} chapitre {chap} abandonné : {e}", mid)
-        return "error", str(e)
+        detail = f"{e} — {permission_hint(folder)}" if isinstance(e, PermissionError) else str(e)
+        ctx.log("error", f"❌ {name} chapitre {chap} abandonné : {detail}", mid)
+        return "error", detail
     os.replace(tmp, final)
     ctx.repo.add_history(mid, "chapter", chap, count, final)
     ctx.log("info", f"✅ {name} chapitre {chap} : {count} pages", mid)
@@ -168,7 +171,13 @@ def check_manga(ctx, manga, opts=None) -> Result:
         return Result(name, 0, "error", str(e))
     folder = manga_folder(ctx, manga, source)
     if not opts.dry_run:
-        os.makedirs(folder, exist_ok=True)
+        try:
+            os.makedirs(folder, exist_ok=True)
+        except OSError as e:
+            detail = f"{e} — {permission_hint(folder)}" if isinstance(e, PermissionError) else str(e)
+            ctx.log("error", f"❌ {name} : dossier inutilisable : {detail}", mid)
+            ctx.repo.set_status(mid, "error", detail)
+            return Result(name, 0, "error", detail)
     got, status, message = 0, "ok", ""
     explicit = source.explicit_chapters(params)
     if explicit is not None:   # liste de numéros connue d'avance (Patreon) : chaque post est indépendant

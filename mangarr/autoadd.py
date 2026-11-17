@@ -6,7 +6,7 @@ from difflib import SequenceMatcher
 from mangarr import library_scan
 from mangarr.core.net import ChapterMissing, FetchError
 from mangarr.core.util import clean_name
-from mangarr.sources import SOURCES, searchable_names
+from mangarr.sources import instantiate, searchable_names
 from mangarr.tomes import mangadex
 
 THRESHOLD = 0.88            # similarité minimale entre un titre connu et celui d'un site / d'un dossier
@@ -44,8 +44,7 @@ def best_result(results, titles):
 
 # ------------------------------------------------------------------ sources
 def _search_source(ctx, name, titles):
-    cls = SOURCES[name]
-    src = cls({**cls.defaults}, page_delay=0)
+    src = instantiate(name, page_delay=0)
     for t in titles[:MAX_TITLES]:
         try:
             results = src.search(ctx.fast_session, t, 1)

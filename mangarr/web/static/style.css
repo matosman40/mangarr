@@ -120,3 +120,11 @@ label.check{flex-direction:row;align-items:center;gap:.5rem;color:var(--fg)}labe
 .pact .oktxt,.pact .warntxt{display:block;margin-bottom:.4rem;font-size:.85rem}
 .pinfo .oktxt{color:#8fe3b3}.pinfo .warntxt{color:#ffd37a}
 .pact form{margin:0}
+
+.meta,.tags{display:flex;flex-wrap:wrap;gap:.3rem;align-items:center;font-size:.8rem}
+.tag{font-size:.72rem;padding:.05rem .45rem;border:1px solid var(--line);border-radius:4px;color:var(--mut);white-space:nowrap}
+
+.searchbar{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.bigsearch{flex:1;min-width:220px;font-size:1.05rem;padding:.7rem .9rem;border-radius:10px}
+.htmx-indicator{opacity:0;transition:opacity .2s;color:var(--mut);font-size:.9rem}
+.htmx-request .htmx-indicator,.htmx-request.htmx-indicator{opacity:1}

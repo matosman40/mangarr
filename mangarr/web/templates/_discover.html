@@ -3,9 +3,9 @@
 {% if not items and not error and offset == 0 %}<p class="empty">Aucun manga ne correspond à ces filtres.</p>{% endif %}
 <div class="pgrid">
 {% for it in items %}
-  <article class="poster" tabindex="0" role="button" aria-label="{{ it.title }}" data-title="{{ it.title }}">
+  <article class="poster" tabindex="0" role="button" aria-label="{{ it.title }}" data-title="{{ it.title }}" data-cover="{{ cover_src(it.cover_url) }}">
     <div class="pcover">
-      {% if it.cover_url %}<img loading="lazy" referrerpolicy="no-referrer" src="{{ cover_src(it.cover_url) }}" alt="" onerror="this.remove()">{% endif %}
+      {% if it.cover_url %}<img loading="lazy" referrerpolicy="no-referrer" src="{{ cover_src(it.cover_small or it.cover_url) }}" alt="" onerror="this.remove()">{% endif %}
       <span class="pletter">{{ it.title[:1] }}</span>
     </div>
     <div class="pbadges">
@@ -23,7 +23,7 @@
       </div>
       <div class="tags">{% for t in it.tags[:6] %}<span class="tag">{{ t }}</span>{% endfor %}</div>
       {% if it.needs_tr %}
-      <div class="synwrap" hx-get="/discover/summary?id={{ it.id | urlencode }}" hx-trigger="load delay:{{ loop.index0 * 250 }}ms" hx-swap="outerHTML">
+      <div class="synwrap" hx-get="/discover/summary?id={{ it.id | urlencode }}" hx-trigger="load delay:{{ loop.index0 * 250 }}ms" hx-swap="outerHTML" hx-request='{"timeout": 45000}'>
         <p class="syn">{{ it.synopsis }}</p><small class="mut">traduction en cours…</small>
       </div>
       {% elif it.synopsis %}<div class="synwrap"><p class="syn">{{ it.synopsis }}</p></div>

@@ -59,11 +59,13 @@ def register(app, ctx, render):
                       types=mangadex.TYPES, statuses=mangadex.STATUSES, demos=mangadex.DEMOS)
 
     @app.get("/discover/results", response_class=HTMLResponse)
-    async def discover_results(request: Request, q: str = "", origin: str = "", order: str = "latestUploadedChapter",
+    async def discover_results(request: Request, q: str = "", origin: str = "", order: str = "auto",
                                offset: int = 0, fr: str = "", adult: str = "", any_tag: str = ""):
         qp = request.query_params
         tags, status, demo = qp.getlist("tag"), qp.getlist("status"), qp.getlist("demo")
         offset = max(0, min(offset, 9900))
+        if order == "auto":      # une recherche par titre se trie par pertinence, le catalogue par dernières sorties
+            order = "relevance" if q.strip() else "latestUploadedChapter"
         try:
             items, total = await run_in_threadpool(
                 lambda: mangadex.discover(ctx.fast_session, api(), q=q.strip(), tags=tags, all_tags=not any_tag,
@@ -80,7 +82,11 @@ def register(app, ctx, render):
             it["in_library"] = any(autoadd.norm(t) in shelf for t in [it["title"]] + it["alt_titles"])
             it["short"] = shorten(it["synopsis"])
             it["needs_tr"] = bool(it["synopsis"]) and it["synopsis_lang"] != "fr" and auto_translate
-            remember(it)
+            known = translate.cached(ctx, it["synopsis"], it["synopsis_lang"]) if it["needs_tr"] else None
+            if known:                                  # déjà traduit auparavant : affiché tout de suite
+                it["synopsis"], it["needs_tr"], it["short"] = known, False, shorten(known)
+            if it["needs_tr"]:
+                remember(it)
             it["type_label"] = mangadex.TYPES.get(it["type"], "")
             it["status_label"] = mangadex.STATUSES.get(it["status"], "")
         nxt = offset + PAGE

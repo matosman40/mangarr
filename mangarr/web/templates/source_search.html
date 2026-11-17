@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Recherche · {{ src_name }} · Mangarr{% endblock %}
+{% block content %}
+<h1>Recherche de la source « {{ src_name }} »</h1>
+<p class="hint">Cette recherche alimente <a href="/add">Ajouter</a> (« Parcourir un site ») et l'ajout automatique de <a href="/discover">Découvrir</a>.
+Indiquez l'adresse de recherche du site avec <code>{q}</code> à la place du texte (et <code>{page}</code> si le site pagine) ;
+ou laissez Mangarr la détecter. L'expression des résultats est facultative : sans elle, les jaquettes et titres sont extraits automatiquement de la page.</p>
+{% if error %}<p class="errtxt box">{{ error }}</p>{% endif %}
+<form method="post" action="/sources/{{ src_name }}/search" class="stack" id="sform">
+  <fieldset><legend>Détection automatique</legend>
+    <label>Adresse du site <input name="site" value="{{ site }}" placeholder="https://www.monsite.fr"></label>
+    <button type="button" class="btn" hx-post="/sources/{{ src_name }}/search/detect" hx-target="#testres" hx-include="[name=site]">Détecter automatiquement</button>
+  </fieldset>
+  <label>Adresse de recherche
+    <input id="f_search_url" name="search_url" value="{{ v.search_url }}" placeholder="https://monsite.fr/?s={q}">
+  </label>
+  <label>Expression des résultats (facultatif, groupes nommés slug, title, cover)
+    <input name="result_regex" value="{{ v.result_regex }}">
+  </label>
+  <label>Domaine (si l'adresse contient {domain})
+    <input name="domain" value="{{ v.domain }}" placeholder="monsite.fr">
+  </label>
+  <label>Texte d'essai <input name="t_q" placeholder="one piece"></label>
+  <div class="actions">
+    <button type="button" class="btn" hx-post="/sources/{{ src_name }}/search/test" hx-target="#testres" hx-include="#sform">Tester la recherche</button>
+    <button class="btn primary">Enregistrer</button>
+    {% if overridden %}<button class="btn danger" name="reset" value="1">Rétablir les réglages d'origine</button>{% endif %}
+    <a class="btn" href="/sources">Annuler</a>
+  </div>
+  <div id="testres" class="hint"></div>
+</form>
+{% endblock %}

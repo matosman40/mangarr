@@ -3,7 +3,7 @@ import json
 import os
 import re
 import time
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 from fastapi import Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -12,8 +12,9 @@ from starlette.concurrency import run_in_threadpool
 from mangarr.autoadd import needs_setup
 from mangarr.core.util import clean_name
 from mangarr.core.net import ChapterMissing, FetchError, fetch_image, sniff_image_ext
-from mangarr.sources import (BUILTIN, SOURCES, HtmlSource, PatternSource, build_source,
-                             load_custom_sources, searchable_names)
+from mangarr.sources import (BUILTIN, OVERRIDES, SOURCES, HtmlSource, PatternSource, build_source, defaults_of,
+                             instantiate, load_custom_sources, load_overrides, searchable_names)
+from mangarr.sources import autosearch
 from mangarr.sources.patreon import API as PATREON_API
 from mangarr.sources.patreon import PatreonSource, inspect_export, post_id
 from mangarr.tomes import mangadex
@@ -177,8 +178,7 @@ def register(app, ctx, render):
                       md_linked=bool(mdid), md_title=mdtitle, browse_sources=found, **form_ctx(request, v))
 
     def run_search(name, q, page):
-        cls = SOURCES[name]
-        src = cls({**cls.defaults}, page_delay=0)
+        src = instantiate(name, page_delay=0)
         try:
             return name, src.search(ctx.fast_session, q, page), None
         except NotImplementedError:
@@ -216,9 +216,10 @@ def register(app, ctx, render):
         form = await request.form()
         try:
             kind, d = parse_source_form(form)
-            if not (d.get("search_url") and d.get("result_regex")):
-                raise ValueError("renseignez l'adresse de recherche et l'expression des résultats")
-            re.compile(d["result_regex"])
+            if not d.get("search_url"):
+                raise ValueError("renseignez l'adresse de recherche")
+            if d.get("result_regex"):
+                re.compile(d["result_regex"])
             base = HtmlSource if kind == "html" else PatternSource
             src = base(dict(d), page_delay=0)
         except (ValueError, re.error) as e:
@@ -331,7 +332,7 @@ def register(app, ctx, render):
             origin = "intégrée" if name in BUILTIN else ("formulaire" if name in custom else "plugin")
             doc = ((cls.__doc__ or "").strip().splitlines() or [""])[0]
             try:
-                can_search = cls({**cls.defaults}).can_search()
+                can_search = instantiate(name).can_search()
             except Exception:
                 can_search = False
             rows.append({"name": name, "origin": origin, "kind": kind_of(cls), "doc": doc, "search": can_search,
@@ -413,8 +414,8 @@ def register(app, ctx, render):
                 re.compile(d["img_regex"])
             if d.get("img_filter"):
                 re.compile(d["img_filter"])
-            if bool(d.get("search_url")) != bool(d.get("result_regex")):
-                raise ValueError("la recherche demande à la fois l'adresse et l'expression des résultats")
+            if d.get("result_regex") and not d.get("search_url"):
+                raise ValueError("une expression de résultats demande aussi l'adresse de recherche")
             if d.get("result_regex"):
                 if "slug" not in re.compile(d["result_regex"]).groupindex:
                     raise ValueError("l'expression des résultats doit contenir un groupe nommé (?P<slug>...)")
@@ -444,6 +445,109 @@ def register(app, ctx, render):
     def sources_reload():
         ctx.reload_sources()
         return RedirectResponse("/sources", status_code=303)
+
+    # ------------------------------------------- recherche d'une source : réglage, détection, test
+    def search_values(name):
+        d = defaults_of(name)
+        return {"search_url": d.get("search_url", ""), "result_regex": d.get("result_regex", ""),
+                "domain": d.get("domain", "")}
+
+    def site_guess(name):
+        d = defaults_of(name)
+        if d.get("domain"):
+            return "https://" + d["domain"]
+        for key in ("chapter_url", "base_template", "base_img_url"):
+            host = urlparse(d.get(key, "")).netloc
+            if host and "{" not in host:
+                return f"{urlparse(d[key]).scheme}://{host}"
+        return ""
+
+    def search_ctx(name, values=None, error=None):
+        return dict(src_name=name, v=values or search_values(name), error=error, site=site_guess(name),
+                    overridden=name in OVERRIDES)
+
+    @app.get("/sources/{name}/search", response_class=HTMLResponse)
+    def source_search_page(request: Request, name: str):
+        if name not in SOURCES:
+            return Response("Source introuvable", status_code=404)
+        return render(request, "source_search.html", **search_ctx(name))
+
+    def parse_search_form(form):
+        v = {k: (form.get(k) or "").strip() for k in ("search_url", "result_regex", "domain")}
+        if v["search_url"] and not v["search_url"].startswith(("http://", "https://")):
+            raise ValueError("l'adresse de recherche doit commencer par http:// ou https://")
+        if v["search_url"] and "{q}" not in v["search_url"]:
+            raise ValueError("l'adresse de recherche doit contenir {q} (le texte cherché)")
+        if v["result_regex"]:
+            try:
+                rx = re.compile(v["result_regex"])
+            except re.error as e:
+                raise ValueError(f"expression invalide : {e}")
+            if "slug" not in rx.groupindex:
+                raise ValueError("l'expression doit contenir un groupe nommé (?P<slug>...)")
+        return v
+
+    @app.post("/sources/{name}/search", response_class=HTMLResponse)
+    async def source_search_save(request: Request, name: str):
+        if name not in SOURCES:
+            return Response("Source introuvable", status_code=404)
+        form = await request.form()
+        overrides = repo.get_setting("source_overrides", {})
+        if form.get("reset"):
+            overrides.pop(name, None)
+        else:
+            try:
+                v = parse_search_form(form)
+            except ValueError as e:
+                return render(request, "source_search.html", status_code=400,
+                              **search_ctx(name, {k: (form.get(k) or "") for k in ("search_url", "result_regex", "domain")}, str(e)))
+            clean = {k: val for k, val in v.items() if val}
+            if clean:
+                overrides[name] = clean
+            else:
+                overrides.pop(name, None)
+        repo.set_setting("source_overrides", overrides)
+        load_overrides(repo)
+        return RedirectResponse("/sources", status_code=303)
+
+    @app.post("/sources/{name}/search/test", response_class=HTMLResponse)
+    async def source_search_test(request: Request, name: str):
+        if name not in SOURCES:
+            return Response("Source introuvable", status_code=404)
+        form = await request.form()
+        try:
+            v = parse_search_form(form)
+            if not v["search_url"]:
+                raise ValueError("renseignez l'adresse de recherche")
+            src = SOURCES[name]({**SOURCES[name].defaults, **{k: val for k, val in v.items() if val}}, page_delay=0)
+        except ValueError as e:
+            return render(request, "_test_result.html", ok=False, msg=str(e))
+        _, res, err = await run_in_threadpool(lambda: run_search_with(src, (form.get("t_q") or "").strip()))
+        if err:
+            return render(request, "_test_result.html", ok=False, msg=err)
+        if not res:
+            return render(request, "_test_result.html", ok=False,
+                          msg="aucun résultat : essayez « Détecter automatiquement » ou un autre texte")
+        return render(request, "_test_result.html", ok=True,
+                      msg=f"{len(res)} résultat(s) : " + ", ".join(r["title"] for r in res[:5]) + "…")
+
+    @app.post("/sources/{name}/search/detect", response_class=HTMLResponse)
+    async def source_search_detect(request: Request, name: str):
+        if name not in SOURCES:
+            return Response("Source introuvable", status_code=404)
+        form = await request.form()
+        site = (form.get("site") or "").strip()
+        try:
+            url, hits = await run_in_threadpool(autosearch.detect, ctx.fast_session, site)
+        except ValueError as e:
+            return render(request, "_detect_result.html", ok=False, msg=str(e), url="")
+        if not url:
+            return render(request, "_detect_result.html", ok=False, url="",
+                          msg="aucune recherche fiable détectée sur ce site (il peut être protégé ou construit en JavaScript) : "
+                              "saisissez l'adresse de recherche à la main")
+        titles = ", ".join(h["title"] for h in hits[:4])
+        return render(request, "_detect_result.html", ok=True, url=url,
+                      msg=f"recherche détectée : {url} ({len(hits)} résultat(s) d'essai : {titles}…). Vérifiez puis enregistrez.")
 
     # ---------------------------------------------------------------- Patreon
     def patreon_rows():

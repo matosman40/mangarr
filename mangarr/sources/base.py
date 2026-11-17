@@ -5,6 +5,7 @@ import time
 from urllib.parse import quote, urljoin
 
 from mangarr.core.net import ChapterMissing, FetchError, fetch_text
+from mangarr.sources.autosearch import search_page
 
 MAX_RESULTS = 60
 
@@ -46,18 +47,22 @@ class Source:
     # ---- recherche / catalogue (optionnel) ---------------------------------- #
     def can_search(self):
         """Vrai si la source sait lister son catalogue (paramètres search_url + result_regex, ou méthode search)."""
-        return type(self).search is not Source.search or bool(
-            self.params.get("search_url") and self.params.get("result_regex"))
+        return type(self).search is not Source.search or bool(self.params.get("search_url"))
 
     def search(self, session, query, page=1):
         """Liste de {slug, title, cover?, url?}. `query` vide = parcourir le catalogue (page `page`).
 
-        Par défaut : `search_url` (avec {q}, {page}, {domain}) et `result_regex` (groupes nommés slug, title, cover).
+        Par défaut : `search_url` (avec {q}, {page}, {domain}) ; `result_regex` (groupes nommés slug, title, cover)
+        est facultatif : sans lui, les résultats sont extraits automatiquement de la page.
         Un plugin peut redéfinir cette méthode.
         """
         tpl, rx = self.params.get("search_url"), self.params.get("result_regex")
-        if not tpl or not rx:
+        if not tpl:
             raise NotImplementedError("cette source n'a pas de recherche")
+        if not rx:      # sans expression : extraction automatique des cartes « jaquette + lien »
+            return search_page(session, tpl, query, page, self.params.get("domain", ""), self.params.get("slug", ""))
+        if page > 1 and "{page}" not in tpl:
+            return []
         url = tpl.format(q=quote(query or ""), page=page, domain=self.params.get("domain", ""),
                          slug=self.params.get("slug", ""))
         try:

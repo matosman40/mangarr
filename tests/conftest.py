@@ -25,7 +25,8 @@ class FakeServer:
             def do_GET(self):
                 path = self.path.split("?")[0]
                 outer.hits.append(self.path)
-                status, ctype, body = outer.routes.get(path, (404, "text/plain", b"not found"))
+                route = outer.routes.get(path, (404, "text/plain", b"not found"))
+                status, ctype, body = route(self.path) if callable(route) else route
                 self.send_response(status)
                 self.send_header("Content-Type", ctype)
                 self.send_header("Content-Length", str(len(body)))

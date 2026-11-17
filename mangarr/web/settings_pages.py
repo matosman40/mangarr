@@ -112,7 +112,7 @@ def register(app, ctx, render):
         url = (form.get("tr_url") or "").strip()
         if provider not in translate.PROVIDERS or (url and not url.startswith(("http://", "https://"))):
             return RedirectResponse("/settings?saved=translation-invalide", status_code=303)
-        cfg = {"provider": provider, "url": url}
+        cfg = {"provider": provider, "url": url, "fallback": provider in ("google", "mymemory")}
         key = (form.get("tr_key") or "").strip() or ("" if form.get("clear_tr_key") else old.get("api_key", ""))
         if key:
             cfg["api_key"] = key

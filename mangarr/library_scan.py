@@ -1,6 +1,9 @@
 """Détection des mangas déjà présents dans les dossiers (bibliothèque des tomes et chapitres en cours)."""
 import os
 import re
+import time
+
+CACHE_SECONDS = 30      # les dossiers d'un NAS sont lents à parcourir : un résultat récent suffit
 
 ARCHIVES = (".cbz", ".cbr", ".zip", ".rar", ".pdf", ".epub", ".7z")
 # « _T01 » (Mangarr), « Tome 1 », « T01 », « Vol. 12 », « v03 »… (pas à l'intérieur d'un mot)
@@ -32,8 +35,28 @@ def _archives(path):
         return []
 
 
-def scan(ctx):
-    """Liste des séries détectées : [{name, path, tomes, files, chapters, tracked, manga_id}], triée par nom."""
+def scan(ctx, fresh=False):
+    """Liste des séries détectées : [{name, path, tomes, files, chapters, tracked, manga_id}], triée par nom.
+
+    Le parcours des dossiers est mis en cache 30 s ; `fresh=True` force une nouvelle lecture.
+    """
+    cached = getattr(ctx, "_scan_cache", None)
+    if not fresh and cached and time.time() - cached[0] < CACHE_SECONDS:
+        raw = cached[1]
+    else:
+        raw = _scan_folders(ctx)
+        ctx._scan_cache = (time.time(), raw)
+    tracked = {m["name"].casefold(): m["id"] for m in ctx.repo.list_mangas()}
+    out = []
+    for item in raw:
+        item = dict(item)
+        item["manga_id"] = tracked.get(item["name"].casefold())
+        item["tracked"] = item["manga_id"] is not None
+        out.append(item)
+    return out
+
+
+def _scan_folders(ctx):
     s = ctx.settings
     series = {}
     chapters_root = os.path.abspath(s.chapters_dir)
@@ -54,13 +77,7 @@ def scan(ctx):
         item = series.setdefault(e.name.casefold(), {"name": e.name, "path": None, "tomes": [], "files": 0,
                                                     "chapters": []})
         item["chapters"] = chaps
-    tracked = {m["name"].casefold(): m["id"] for m in ctx.repo.list_mangas()}
-    out = []
-    for key, item in sorted(series.items()):
-        item["manga_id"] = tracked.get(key)
-        item["tracked"] = item["manga_id"] is not None
-        out.append(item)
-    return out
+    return [item for _, item in sorted(series.items())]
 
 
 def index_by_norm(series, norm):

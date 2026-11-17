@@ -91,7 +91,9 @@ def test_custom_source_with_search(client, ctx, server):
 def test_search_config_validation(client):
     base = {"name": "okname", "kind": "html", "d_chapter_url": "http://x/{chap}"}
     r = client.post("/sources", data={**base, "d_search_url": "http://x/?q={q}"})
-    assert r.status_code == 400 and "à la fois" in r.text
+    assert r.status_code == 303                                           # l'adresse suffit : extraction automatique
+    r = client.post("/sources", data={**base, "name": "autre", "d_result_regex": "(?P<slug>x)"})
+    assert r.status_code == 400 and "adresse de recherche" in r.text
     r = client.post("/sources", data={**base, "d_search_url": "http://x/?q={q}", "d_result_regex": "(?P<title>x)"})
     assert r.status_code == 400 and "slug" in r.text
     r = client.post("/sources", data={**base, "d_search_url": "http://x/?q={q}", "d_result_regex": "(("})

@@ -9,18 +9,32 @@ from mangarr.sources import builtin, patreon  # noqa: F401  (enregistrent les so
 from mangarr.sources.builtin import HtmlSource, PatternSource
 
 BUILTIN = set(SOURCES)
+OVERRIDES = {}      # nom de source -> réglages de recherche enregistrés dans l'interface (search_url, domain...)
+
+
+def defaults_of(name):
+    """Valeurs par défaut effectives d'une source : classe + réglages personnalisés."""
+    return {**SOURCES[name].defaults, **OVERRIDES.get(name, {})}
+
+
+def instantiate(name, **kw):
+    return SOURCES[name](defaults_of(name), **kw)
+
+
+def load_overrides(repo):
+    OVERRIDES.clear()
+    OVERRIDES.update({k: v for k, v in repo.get_setting("source_overrides", {}).items() if k in SOURCES})
 
 __all__ = ["Source", "register", "SOURCES", "ChapterMissing", "FetchError", "fetch_image", "fetch_text",
-           "load_plugins", "load_custom_sources", "build_source", "searchable_names"]
+           "load_plugins", "load_custom_sources", "build_source", "searchable_names", "instantiate", "defaults_of", "load_overrides"]
 
 
 def searchable_names():
     """Noms des sources qui savent chercher dans un catalogue (search_url + result_regex, ou plugin)."""
     out = []
     for name in sorted(SOURCES):
-        cls = SOURCES[name]
         try:
-            if cls({**cls.defaults}).can_search():
+            if instantiate(name).can_search():
                 out.append(name)
         except Exception:
             pass
@@ -63,7 +77,7 @@ def build_source(source_key, manga_params, settings):
     if source_key not in SOURCES:
         raise ValueError(f"source inconnue '{source_key}' (disponibles : {', '.join(sorted(SOURCES))})")
     cls = SOURCES[source_key]
-    params = {**cls.defaults, **manga_params}
+    params = {**defaults_of(source_key), **manga_params}
     src = cls(params, page_delay=settings.page_delay)
     if isinstance(src, patreon.PatreonSource):
         src.export_dir = settings.patreon_dir

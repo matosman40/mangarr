@@ -113,17 +113,25 @@ def volumes(session, cache_dir, key, name, params):
 # Découverte : catalogue filtrable (genres, type, statut, tri) avec jaquettes et synopsis
 # --------------------------------------------------------------------------- #
 CACHE = {}   # (url, paramètres) -> (instant, json) ; vidé à la demande
-FR_TAGS = {
-    "Action": "Action", "Adventure": "Aventure", "Comedy": "Comédie", "Drama": "Drame", "Fantasy": "Fantastique",
-    "Horror": "Horreur", "Mystery": "Mystère", "Psychological": "Psychologique", "Romance": "Romance",
-    "Sci-Fi": "Science-fiction", "Slice of Life": "Tranche de vie", "Sports": "Sport", "Supernatural": "Surnaturel",
-    "Tragedy": "Tragédie", "Historical": "Historique", "Martial Arts": "Arts martiaux", "School Life": "Vie scolaire",
-    "Isekai": "Isekai", "Mecha": "Mecha", "Magic": "Magie", "Military": "Militaire", "Music": "Musique",
-    "Monsters": "Monstres", "Survival": "Survie", "Villainess": "Anti-héroïne", "Reincarnation": "Réincarnation",
-    "Crime": "Crime", "Thriller": "Thriller", "Superhero": "Super-héros", "Philosophical": "Philosophique",
-    "Post-Apocalyptic": "Post-apocalyptique", "Medical": "Médical", "Cooking": "Cuisine", "Gore": "Gore",
-    "Samurai": "Samouraï", "Ninja": "Ninja", "Vampires": "Vampires", "Zombies": "Zombies", "Time Travel": "Voyage dans le temps",
-    "Video Games": "Jeux vidéo", "Virtual Reality": "Réalité virtuelle", "Animals": "Animaux", "Demons": "Démons",
+FR_TAGS = {   # tous les genres et thèmes de MangaDex
+    # genres
+    "Action": "Action", "Adventure": "Aventure", "Boys' Love": "Boys' Love", "Comedy": "Comédie", "Crime": "Crime",
+    "Drama": "Drame", "Fantasy": "Fantastique", "Girls' Love": "Girls' Love", "Historical": "Historique",
+    "Horror": "Horreur", "Isekai": "Isekai", "Magical Girls": "Magical girls", "Mecha": "Mecha", "Medical": "Médical",
+    "Mystery": "Mystère", "Philosophical": "Philosophique", "Psychological": "Psychologique", "Romance": "Romance",
+    "Sci-Fi": "Science-fiction", "Slice of Life": "Tranche de vie", "Sports": "Sport", "Superhero": "Super-héros",
+    "Thriller": "Thriller", "Tragedy": "Tragédie", "Wuxia": "Wuxia",
+    # thèmes
+    "Aliens": "Extraterrestres", "Animals": "Animaux", "Cooking": "Cuisine", "Crossdressing": "Travestissement",
+    "Delinquents": "Délinquants", "Demons": "Démons", "Genderswap": "Changement de sexe", "Ghosts": "Fantômes",
+    "Gyaru": "Gyaru", "Harem": "Harem", "Incest": "Inceste", "Loli": "Loli", "Mafia": "Mafia", "Magic": "Magie",
+    "Martial Arts": "Arts martiaux", "Military": "Militaire", "Monster Girls": "Filles-monstres",
+    "Monsters": "Monstres", "Music": "Musique", "Ninja": "Ninja", "Office Workers": "Employés de bureau",
+    "Police": "Police", "Post-Apocalyptic": "Post-apocalyptique", "Reincarnation": "Réincarnation",
+    "Reverse Harem": "Harem inversé", "Samurai": "Samouraï", "School Life": "Vie scolaire", "Shota": "Shota",
+    "Supernatural": "Surnaturel", "Survival": "Survie", "Time Travel": "Voyage dans le temps",
+    "Traditional Games": "Jeux traditionnels", "Vampires": "Vampires", "Video Games": "Jeux vidéo",
+    "Villainess": "Méchante (villainess)", "Virtual Reality": "Réalité virtuelle", "Zombies": "Zombies",
 }
 ORDERS = {   # clé de tri MangaDex -> (libellé, sens)
     "latestUploadedChapter": ("Dernières sorties", "desc"), "followedCount": ("Populaires", "desc"),
@@ -193,7 +201,7 @@ def _normalize(d):
             "synopsis": clean_synopsis(desc.get(lang) if lang else ""), "synopsis_lang": (lang or "en").split("-")[0],
             "year": a.get("year"), "status": a.get("status"), "type": a.get("originalLanguage"),
             "demographic": a.get("publicationDemographic"), "rating": a.get("contentRating"),
-            "tags": tags, "cover_url": _cover_url(d), "last_chapter": a.get("lastChapter")}
+            "tags": tags, "cover_url": _cover_url(d), "cover_small": (_cover_url(d) or "").replace(".512.jpg", ".256.jpg") or None, "last_chapter": a.get("lastChapter")}
 
 
 def discover(session, api=MD_API, q="", tags=(), all_tags=True, origin="", status=(), demo=(),

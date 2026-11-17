@@ -183,3 +183,77 @@ def test_proxy_and_summary_need_auth(ctx):
     assert c.get("/proxy/cover?u=x").status_code == 303
     assert c.get(f"/discover/summary?id={MID}").status_code == 303
     assert c.post("/settings/translation", data={}).status_code == 303
+
+
+# ------------------------------------------------------------------ genres / thèmes en français, Google + repli
+MD_TAGS = ["Action", "Adventure", "Boys' Love", "Comedy", "Crime", "Drama", "Fantasy", "Girls' Love", "Historical",
+           "Horror", "Isekai", "Magical Girls", "Mecha", "Medical", "Mystery", "Philosophical", "Psychological",
+           "Romance", "Sci-Fi", "Slice of Life", "Sports", "Superhero", "Thriller", "Tragedy", "Wuxia", "Aliens",
+           "Animals", "Cooking", "Crossdressing", "Delinquents", "Demons", "Genderswap", "Ghosts", "Gyaru", "Harem",
+           "Incest", "Loli", "Mafia", "Magic", "Martial Arts", "Military", "Monster Girls", "Monsters", "Music",
+           "Ninja", "Office Workers", "Police", "Post-Apocalyptic", "Reincarnation", "Reverse Harem", "Samurai",
+           "School Life", "Shota", "Supernatural", "Survival", "Time Travel", "Traditional Games", "Vampires",
+           "Video Games", "Villainess", "Virtual Reality", "Zombies"]
+
+
+def test_every_mangadex_genre_and_theme_has_a_french_label():
+    from mangarr.tomes.mangadex import FR_TAGS
+    assert [t for t in MD_TAGS if t not in FR_TAGS] == []
+    assert FR_TAGS["Office Workers"] == "Employés de bureau" and FR_TAGS["Delinquents"] == "Délinquants"
+    assert FR_TAGS["Sci-Fi"] == "Science-fiction" and FR_TAGS["Drama"] == "Drame"
+
+
+def test_tag_chips_are_styled():
+    css = open(os.path.join(os.path.dirname(discover.__file__), "static", "style.css"), encoding="utf-8").read()
+    assert ".tag{" in css and ".tags" in css and ".meta" in css       # régression : genres collés sans espacement
+
+
+GOOGLE_OK = [[["Bonjour le monde", "Hello world", None, None, 10]], None, "en"]
+
+
+def use_google(ctx, server, fallback=False):
+    ctx.repo.set_setting("translation", {"provider": "google", "google_url": server.url + "/g",
+                                         "mymemory_url": server.url + "/mm", "fallback": fallback})
+
+
+def test_default_provider_is_google_with_fallback(ctx):
+    cfg = translate.get_config(ctx.repo)
+    assert cfg["provider"] == "google" and cfg["fallback"] is True
+
+
+def test_google_translates(ctx, server):
+    use_google(ctx, server)
+    server.add_json("/g", GOOGLE_OK)
+    assert translate.translate(ctx, ENGLISH, "ja") == ("Bonjour le monde", None)
+    assert "tl=fr" in server.hits[-1] and "sl=ja" in server.hits[-1] and "client=gtx" in server.hits[-1]
+
+
+def test_fallback_to_mymemory_when_google_fails(ctx, server):
+    use_google(ctx, server, fallback=True)
+    server.routes["/g"] = (429, "text/plain", b"limite")
+    server.add_json("/mm", MM_OK)
+    assert translate.translate(ctx, ENGLISH, "en") == ("Bonjour l'ami", None)
+    n = len([h for h in server.hits if h.startswith("/g")])
+    assert translate.translate(ctx, "Un autre texte à traduire.", "en")[0] == "Bonjour l'ami"
+    assert len([h for h in server.hits if h.startswith("/g")]) == n        # Google est mis en pause après le 429
+
+
+def test_no_fallback_when_disabled_or_private_service(ctx, server):
+    use_google(ctx, server, fallback=False)
+    server.routes["/g"] = (500, "text/plain", b"x")
+    server.add_json("/mm", MM_OK)
+    out, err = translate.translate(ctx, ENGLISH, "en")
+    assert out is None and "Google" in err and not any(h.startswith("/mm") for h in server.hits)
+    ctx.repo.set_setting("translation", {"provider": "libretranslate", "url": server.url, "fallback": True,
+                                         "google_url": server.url + "/g"})
+    server.routes[("POST", "/translate")] = (400, "application/json", b'{"error": "panne"}')
+    server.add_json("/g", GOOGLE_OK)
+    before = len(server.hits)
+    out, err = translate.translate(ctx, "Texte privé à garder chez soi.", "en")
+    assert out is None and "panne" in err
+    assert not any(h.startswith("/g") for h in server.hits[before:])           # rien ne sort du réseau
+
+
+def test_translation_error_script_in_page(client):
+    assert "htmx:responseError" in client.get("/discover").text
+    assert "traduction indisponible" in client.get("/discover").text
