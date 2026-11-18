@@ -214,3 +214,9 @@ main>details>summary{cursor:pointer}
 
 a.btn{text-decoration:none;display:inline-block}
 @media (max-width:640px){header .lbl{display:none}header .btn.primary{padding:.45rem .8rem}}
+
+.newsbox .tag.patreon{background:var(--pt-bg);color:var(--pt-fg)}
+:root{--pt-bg:#ffe0e6;--pt-fg:#a3173a}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--pt-bg:#4a1f2a;--pt-fg:#ffb3c4}}
+:root[data-theme=dark]{--pt-bg:#4a1f2a;--pt-fg:#ffb3c4}
+.codebox{display:block;word-break:break-all;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.6rem .8rem;font-size:.82rem}

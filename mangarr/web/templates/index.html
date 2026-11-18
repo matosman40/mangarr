@@ -2,6 +2,7 @@
 {% block content %}
 <h1>Mangas suivis</h1>
 {% if retried %}<p class="{{ 'oktxt' if found else 'warntxt' }}">{{ found }} source(s) trouvée(s) sur {{ retried }} manga(s) à configurer.</p>{% endif %}
+{% if patreon_todo %}<p class="box warnbox"><a href="/patreon">🟣 {{ patreon_todo }} export(s) Patreon à récupérer</a> — le script du navigateur s'en charge.</p>{% endif %}
 {% if setup_count %}<form method="post" action="/retry-sources" class="box warnbox" style="margin-bottom:1rem">
   ⚠️ {{ setup_count }} manga(s) « à configurer » (source introuvable à l'ajout).
   <button class="btn">Réessayer la recherche de source pour tous</button>

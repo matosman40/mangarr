@@ -23,13 +23,13 @@ from mangarr.sources import searchable_names
 from mangarr.tomes import covers
 from mangarr.core.engine import RUN_LOCK, RunOptions, check_all
 from mangarr.tomes.plan import chapter_numbers
-from mangarr.web import discover, library, manage, news_pages, settings_pages
+from mangarr.web import discover, library, manage, news_pages, patreon_auto, settings_pages
 from mangarr.web.app_utils import cover_src, fmt_ts
 
 BASE = Path(__file__).parent
 COOKIE = "mangarr_session"
 SESSION_TTL = 7 * 24 * 3600
-PUBLIC = ("/health", "/login", "/static")
+PUBLIC = ("/health", "/login", "/static", "/patreon/wanted", "/patreon/ingest")   # les 2 /patreon/* vérifient un jeton
 
 
 class Auth:
@@ -165,7 +165,9 @@ def create_app(ctx, scheduler=None, password=None):
     def index(request: Request, retried: int = 0, found: int = 0):
         mangas = [manga_view(ctx, m) for m in ctx.repo.list_mangas()]
         covers.ensure_async(ctx)          # les jaquettes manquantes se complètent toutes seules
-        return render(request, "index.html", mangas=mangas, retried=retried, found=found,
+        from mangarr import patreon_sync
+        pt = len(patreon_sync.wanted(ctx)["posts"]) if any(m["source"] == "patreon" for m in mangas) else 0
+        return render(request, "index.html", mangas=mangas, retried=retried, found=found, patreon_todo=pt,
                       setup_count=sum(1 for m in mangas if m["setup"]))
 
     @app.get("/grid", response_class=HTMLResponse)
@@ -279,4 +281,5 @@ def create_app(ctx, scheduler=None, password=None):
     discover.register(app, ctx, render)
     library.register(app, ctx, render)
     news_pages.register(app, ctx, render)
+    patreon_auto.register(app, ctx, render)
     return app

@@ -3,9 +3,9 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse, Response
 from starlette.concurrency import run_in_threadpool
 
-from mangarr import news
+from mangarr import news, patreon_sync
 
-SAFE_PREFIX = ("https://myanimelist.net/", "https://www.reddit.com/")      # liens et images venant de l'API : on n'affiche rien d'autre
+SAFE_PREFIX = ("https://myanimelist.net/", "https://www.reddit.com/", "https://www.patreon.com/")      # liens et images venant de l'API : on n'affiche rien d'autre
 SAFE_IMG = ("https://cdn.myanimelist.net/",)
 
 
@@ -35,4 +35,13 @@ def register(app, ctx, render):
         if not m:
             return Response("Manga introuvable", status_code=404)
         data, err = await run_in_threadpool(news.get, ctx, ctx.fast_session, m, bool(refresh))
+        if m["source"] == "patreon":            # posts Patreon récents (envoyés par le userscript du navigateur)
+            posts = await run_in_threadpool(patreon_sync.feed_for, ctx, m)
+            if posts:
+                data = {**(data or {"info": {}, "authors": [], "feed": []}), "feed": sorted(
+                    list((data or {}).get("feed", [])) + [
+                        {"src": "patreon", "kind": "news", "title": p["title"], "url": p["url"], "date": p["date"],
+                         "excerpt": "", "meta": "nouveau, pas encore dans la série" if p["new"] else "déjà suivi",
+                         "spoiler": False} for p in posts], key=lambda x: x["date"], reverse=True)}
+                err = None if data.get("feed") else err
         return render(request, "_news.html", m=m, d=_clean(data), error=err)

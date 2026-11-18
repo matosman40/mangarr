@@ -229,6 +229,11 @@ def check_all(ctx, only=None, opts=None) -> list[Result]:
     else:
         mangas = ctx.repo.list_mangas(only_enabled=True)
     started = time.time()
+    try:   # exports Patreon déposés dans <config>/patreon/inbox : pris en compte avant chaque vérification
+        from mangarr import patreon_sync
+        patreon_sync.scan_inbox(ctx)
+    except Exception as e:
+        ctx.repo.add_log("warn", f"patreon (dossier inbox) : {e!r}")
     with RUN_LOCK:
         results = []
         for m in mangas:

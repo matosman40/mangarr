@@ -583,8 +583,14 @@ def register(app, ctx, render):
         return out
 
     @app.get("/patreon", response_class=HTMLResponse)
-    def patreon_page(request: Request):
-        return render(request, "patreon.html", series=patreon_rows(), now=time.time())
+    def patreon_page(request: Request, msg: str = ""):
+        from mangarr import patreon_sync
+        patreon_sync.scan_inbox(ctx)
+        rows = patreon_rows()
+        for s in rows:
+            s["feed"] = patreon_sync.feed_for(ctx, s["manga"])
+        return render(request, "patreon.html", series=rows, now=time.time(), msg=msg, sync=patreon_sync.sync_status(ctx), inbox=patreon_sync.inbox_dir(ctx),
+                      token=patreon_sync.get_token(repo), base=str(request.base_url).rstrip("/"))
 
     @app.post("/patreon/upload")
     async def patreon_upload(files: list[UploadFile]):

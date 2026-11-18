@@ -1,7 +1,36 @@
 {% extends "base.html" %}
 {% block title %}Patreon · Mangarr{% endblock %}
 {% block content %}
-<h1>Exports Patreon</h1>
+<h1>Patreon</h1>
+{% if msg %}<p class="oktxt">{{ msg }}</p>{% endif %}
+<div class="box" style="border-color:var(--line)">
+  <h2 style="margin-top:0">Synchronisation automatique
+    {% if sync.seen and now - sync.seen < 8 * 3600 %}<span class="badge ok">script actif · vu il y a {{ ((now - sync.seen) / 60) | round | int }} min</span>
+    {% elif sync.seen %}<span class="badge">script vu le {{ fmt_ts(sync.seen) }}</span>
+    {% else %}<span class="badge err">script jamais vu</span>{% endif %}</h2>
+  {% if sync.last_ingest %}<p class="hint">Dernier envoi reçu : {{ fmt_ts(sync.last_ingest) }}{% if sync.last_saved %} ({{ sync.last_saved }} export(s)){% endif %}.</p>{% endif %}
+  <p>Patreon bloque les requêtes serveur et Mangarr ne contourne pas cette protection. Un petit script installé dans <b>votre navigateur</b>
+  (déjà connecté à Patreon) envoie à Mangarr les exports JSON à télécharger et les derniers posts de vos créateurs. Tout est automatique ensuite :
+  dès qu'un export arrive, le tome est téléchargé.</p>
+  <ol>
+    <li>Installez l'extension <b>Tampermonkey</b> (ou Violentmonkey) sur votre ordinateur.</li>
+    <li><a class="btn primary" href="/patreon/userscript.user.js">Installer le script Mangarr</a> puis validez dans Tampermonkey.</li>
+    <li>Ouvrez <a href="https://www.patreon.com/" target="_blank" rel="noopener noreferrer">patreon.com</a> : le script se lance seul (toutes les 3 h), ou cliquez sur la pastille « Mangarr ⟳ » en bas à droite.</li>
+  </ol>
+  <p class="hint">Le script contient un jeton secret propre à votre Mangarr. S'il fuit, régénérez-le (il faudra réinstaller le script).
+  Le navigateur doit pouvoir joindre <code>{{ base }}</code>.</p>
+  <form method="post" action="/patreon/token/renew" onsubmit="return confirm('Régénérer le jeton ? Le script actuel cessera de fonctionner.')"><button class="btn">Régénérer le jeton</button></form>
+</div>
+<form method="post" action="/patreon/check" style="margin:1rem 0"><button class="btn primary">⟳ Vérifier maintenant</button>
+  <span class="hint"> relit le dossier <code>inbox</code> puis télécharge tout ce qui est prêt</span></form>
+<h2>Autres moyens d'ajouter un export</h2>
+<details><summary>Coller le contenu de la page d'API</summary>
+  <form method="post" action="/patreon/paste" class="stack"><textarea name="text" rows="5" placeholder="Collez ici le JSON (un ou plusieurs exports)"></textarea>
+  <button class="btn">Importer</button></form></details>
+<details><summary>Déposer des fichiers dans un dossier (NAS, SMB, SSH)</summary>
+  <p class="hint">Copiez vos fichiers <code>.json</code>, avec le nom que vous voulez, dans <code>{{ inbox }}</code>
+  (côté hôte : <code>config/patreon/inbox</code>). Ils sont importés automatiquement à chaque vérification.</p></details>
+<h2>Envoi manuel</h2>
 <p class="hint">Patreon bloque les requêtes serveur et Mangarr ne contourne pas cette protection. Pour chaque post,
 ouvrez le lien « page d'API » dans votre navigateur connecté, enregistrez la page en <code>.json</code>, puis déposez-la ici.
 Les liens signés expirent (environ 38 h pour <code>download_url</code>, 14 jours pour l'original) : téléchargez peu après l'export.</p>
@@ -11,6 +40,12 @@ Les liens signés expirent (environ 38 h pour <code>download_url</code>, 14 jour
 
 {% for s in series %}
 <h2>{{ s.manga.name.replace('_', ' ') }} <small>{{ s.todo }} export(s) à faire</small></h2>
+{% set fresh = s.feed | selectattr('new') | list %}
+{% if fresh %}<div class="box" style="border-color:var(--ok)">🆕 Nouveaux posts sur Patreon :
+  {% for p in fresh %}<form method="post" action="/patreon/add-post" class="inline" style="margin:.3rem 0">
+    <input type="hidden" name="manga" value="{{ s.manga.id }}"><input type="hidden" name="url" value="{{ p.url }}">
+    <a href="{{ p.url }}" target="_blank" rel="noopener noreferrer">{{ p.title }}</a> <small class="mut">{{ p.date }}</small>
+    <button class="btn">Ajouter comme prochain tome</button></form>{% endfor %}</div>{% endif %}
 <table>
   <tr><th>Tome</th><th>Post</th><th>État</th><th>Expiration</th><th>Page d'API</th></tr>
   {% for p in s.posts %}

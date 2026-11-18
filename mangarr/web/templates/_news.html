@@ -9,7 +9,7 @@
     <ul class="feed">
       {% for n in d.feed %}
       <li>
-        <span class="tag {{ n.src }}">{{ 'Reddit' if n.src == 'reddit' else 'MAL' }}</span>
+        <span class="tag {{ n.src }}">{{ {'reddit': 'Reddit', 'patreon': 'Patreon'}.get(n.src, 'MAL') }}</span>
         {% if n.spoiler %}
           <details class="spoil"><summary><span class="tag spoil">spoilers possibles</span> afficher</summary>
             {% if n.url %}<a href="{{ n.url }}" target="_blank" rel="noopener noreferrer">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}
