@@ -23,7 +23,7 @@ from mangarr.sources import searchable_names
 from mangarr.tomes import covers
 from mangarr.core.engine import RUN_LOCK, RunOptions, check_all
 from mangarr.tomes.plan import chapter_numbers
-from mangarr.web import discover, library, manage, news_pages, patreon_auto, settings_pages
+from mangarr.web import discover, health_pages, library, manage, news_pages, patreon_auto, settings_pages
 from mangarr.web.app_utils import cover_src, fmt_ts
 
 BASE = Path(__file__).parent
@@ -282,4 +282,5 @@ def create_app(ctx, scheduler=None, password=None):
     library.register(app, ctx, render)
     news_pages.register(app, ctx, render)
     patreon_auto.register(app, ctx, render)
+    health_pages.register(app, ctx, render)
     return app

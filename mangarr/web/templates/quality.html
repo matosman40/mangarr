@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Qualité · Mangarr{% endblock %}
+{% block content %}
+<h1>Qualité de la bibliothèque</h1>
+<p class="hint">Repère les CBZ corrompus ou vides, les chapitres et tomes manquants dans une série, et les téléchargements interrompus
+  (<code>.part</code>). La lecture complète des archives peut prendre du temps sur une grosse bibliothèque.</p>
+<form method="post" action="/quality/scan"><button class="btn primary" {{ 'disabled' if state.running }}>🔍 Lancer le contrôle</button></form>
+<div id="qres">
+  {% include "_quality.html" %}
+</div>
+{% endblock %}

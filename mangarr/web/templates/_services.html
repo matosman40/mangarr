@@ -1,0 +1,6 @@
+<ul class="checks">
+  {% for i in items %}
+  <li class="chk {{ i.level }}"><span class="dot"></span>
+    <div><b>{{ i.label }}</b><br><small>{{ i.detail }}</small></div></li>
+  {% endfor %}
+</ul>

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Calendrier · Mangarr{% endblock %}
+{% block content %}
+<h1>Calendrier des sorties</h1>
+<p class="hint">Estimation d'après le rythme habituel de chaque série (écart médian entre vos derniers téléchargements). Il faut au moins 3 sorties pour estimer.</p>
+<table>
+  <tr><th>Manga</th><th>Dernière sortie</th><th>Rythme</th><th>Prochaine estimée</th></tr>
+  {% for r in rows %}
+  <tr><td><a href="/manga/{{ r.id }}">{{ r.name.replace('_', ' ') }}</a></td>
+    <td>{{ fmt_ts(r.last) }}</td>
+    <td>{% if r.pace %}~ {{ (r.pace / 86400) | round(1) }} j{% else %}<span class="mut">–</span>{% endif %}</td>
+    <td>{% if r.next %}{% if r.late %}<span class="badge">attendue</span> {% endif %}{{ fmt_ts(r.next)[:10] }}
+        {% if not r.late %}<small class="mut">(dans {{ ((r.next - now) / 86400) | round(1) }} j)</small>{% endif %}
+        {% else %}<span class="mut">pas assez de données</span>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="4" class="empty">Aucun téléchargement pour l'instant.</td></tr>{% endfor %}
+</table>
+<h2>Activité des 14 derniers jours</h2>
+{% for day, items in days %}
+  <h3>{{ day }}</h3>
+  <ul>{% for i in items %}<li>{{ i.name.replace('_', ' ') }} — {{ 'tome' if i.kind == 'tome' else 'chapitre' }} {{ i.number }}</li>{% endfor %}</ul>
+{% else %}<p class="empty">Rien de téléchargé récemment.</p>{% endfor %}
+{% endblock %}

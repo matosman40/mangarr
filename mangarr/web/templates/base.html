@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Mangarr{% endblock %}</title>
   <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#5b5bd6">
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/static/icon-180.png">
+  <link rel="icon" type="image/png" href="/static/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Mangarr">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <script>try{var t=localStorage.getItem("mangarr_theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
   <link rel="stylesheet" href="/static/style.css?v={{ asset_v() }}">
   <script src="/static/htmx.min.js"></script>
@@ -20,6 +28,9 @@
     <details class="more"><summary>Plus ▾</summary>
       <div class="menu">
         <a href="/add">➕ Ajouter</a>
+        <a href="/calendar">Calendrier</a>
+        <a href="/quality">Qualité</a>
+        <a href="/status">Santé</a>
         <a href="/sources">Sources</a>
         <a href="/patreon">Patreon</a>
         <a href="/logs">Journaux</a>

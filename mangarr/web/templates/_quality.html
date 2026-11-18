@@ -1,0 +1,19 @@
+{% if state.running %}
+  <p class="empty" hx-get="/quality/result" hx-trigger="every 2s" hx-target="#qres" hx-swap="innerHTML">Contrôle en cours… {{ state.done }} / {{ state.total }} manga(s)</p>
+{% elif res %}
+  {% if res.error %}<p class="errtxt">Contrôle interrompu : {{ res.error }}</p>{% endif %}
+  <p>{{ res.checked }} manga(s) contrôlé(s) ·
+    <b>{{ res.totals.corrupt }}</b> fichier(s) à réparer · <b>{{ res.totals.gaps }}</b> numéro(s) manquant(s) · <b>{{ res.totals.parts }}</b> fichier(s) .part</p>
+  {% if res.totals.parts %}<form method="post" action="/quality/clean"><button class="btn">🧹 Supprimer les .part ({{ res.totals.parts }})</button></form>{% endif %}
+  {% for m in res.mangas %}
+  <h2><a href="/manga/{{ m.id }}">{{ m.name.replace('_', ' ') }}</a></h2>
+  <ul>
+    {% for c in m.corrupt %}<li class="errtxt">{{ c.file }} — {{ c.why }} (supprimez-le : il sera retéléchargé)</li>{% endfor %}
+    {% if m.gaps_ch %}<li>Chapitres manquants : {{ m.gaps_ch[:30] | join(', ') }}{% if m.gaps_ch | length > 30 %}…{% endif %}</li>{% endif %}
+    {% if m.gaps_tomes %}<li>Tomes manquants : {{ m.gaps_tomes | join(', ') }}</li>{% endif %}
+    {% if m.parts %}<li class="mut">{{ m.parts | length }} téléchargement(s) interrompu(s) (.part)</li>{% endif %}
+  </ul>
+  {% else %}<p class="oktxt">✅ Rien à signaler.</p>{% endfor %}
+{% else %}
+  <p class="empty">Aucun contrôle lancé depuis le démarrage.</p>
+{% endif %}

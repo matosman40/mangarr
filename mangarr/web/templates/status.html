@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Santé · Mangarr{% endblock %}
+{% block content %}
+<h1>Santé de l'installation
+  {% if worst == 'ok' %}<span class="badge ok">tout va bien</span>
+  {% elif worst == 'warn' %}<span class="badge">à surveiller</span>
+  {% else %}<span class="badge err">problème détecté</span>{% endif %}</h1>
+{% if msg %}<p class="oktxt">{{ msg }}</p>{% endif %}
+{% if not has_mangas %}
+<div class="box warnbox" style="margin-bottom:1rem">👋 <b>Première installation ?</b> Vérifiez que tout est vert ci-dessous, puis
+  <a href="/library">importez vos mangas déjà présents</a> ou <a href="/discover">découvrez-en de nouveaux</a>.</div>
+{% endif %}
+
+<ul class="checks">
+  {% for i in items %}
+  <li class="chk {{ i.level }}"><span class="dot"></span>
+    <div><b>{{ i.label }}</b><br><small>{{ i.detail }}</small></div></li>
+  {% endfor %}
+</ul>
+
+<h2>Services externes</h2>
+<div hx-get="/status/services" hx-trigger="load" hx-swap="innerHTML"><p class="empty">Test des services…</p></div>
+
+<h2>Sources</h2>
+<table>
+  <tr><th>Source</th><th>Mangas</th><th>En erreur</th><th>À configurer</th><th>Dernière erreur</th></tr>
+  {% for s in sources %}<tr><td>{{ s.source }}</td><td>{{ s.total }}</td>
+    <td>{% if s.error %}<span class="badge err">{{ s.error }}</span>{% else %}0{% endif %}</td>
+    <td>{{ s.setup or 0 }}</td><td class="mut">{{ s.msg }}</td></tr>
+  {% else %}<tr><td colspan="5" class="empty">Aucun manga suivi.</td></tr>{% endfor %}
+</table>
+
+<h2>Sauvegardes</h2>
+<p class="hint">Une copie de la base est faite automatiquement chaque jour (les 7 dernières sont gardées dans <code>config/backups</code>).
+  L'export contient la base et vos exports Patreon ; les jaquettes se retrouvent seules.</p>
+<div class="actions">
+  <form method="post" action="/backup/now"><button class="btn">Sauvegarder maintenant</button></form>
+  <a class="btn primary" href="/backup/download">⬇ Exporter (zip)</a>
+</div>
+<table>
+  <tr><th>Fichier</th><th>Date</th><th>Taille</th></tr>
+  {% for b in backups %}<tr><td>{{ b.name }}</td><td>{{ fmt_ts(b.ts) }}</td><td>{{ (b.size / 1024) | round | int }} Ko</td></tr>
+  {% else %}<tr><td colspan="3" class="empty">Aucune sauvegarde pour l'instant.</td></tr>{% endfor %}
+</table>
+{% endblock %}

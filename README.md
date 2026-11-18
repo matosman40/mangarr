@@ -179,3 +179,23 @@ Python plugins, Discord/Telegram/ntfy notifications, Komga/Kavita refresh, and a
 Run the image `ghcr.io/matosman40/mangarr` with volumes `/library` and `/config`, set `MANGARR_PASSWORD`, and open
 port 8080. Patreon blocks server requests; Mangarr never bypasses this and instead reads JSON exports made from
 your own browser (see `docs/patreon-export.js`). The UI is currently French-only. MIT licensed.
+
+
+## Santé, sauvegardes et qualité
+
+- **Santé** (`/status`) : droits d'écriture de chaque dossier (avec la commande `chown` à lancer si besoin), espace disque,
+  base de données, état de MangaDex / MyAnimeList / Reddit / script Patreon, erreurs par source.
+- **Sauvegardes** : copie automatique de la base chaque jour dans `config/backups` (7 gardées) ; export `.zip` en un clic
+  (base + exports Patreon). Pour restaurer, arrêtez le conteneur et remplacez `config/mangarr.db`.
+- **Qualité** (`/quality`) : CBZ corrompus ou vides, chapitres/tomes manquants, téléchargements interrompus (`.part`).
+- **Calendrier** (`/calendar`) : prochaine sortie estimée d'après le rythme de chaque série.
+
+## Installer sur l'écran d'accueil (téléphone)
+
+Ouvrez Mangarr dans le navigateur, puis *Partager → Sur l'écran d'accueil* (iPhone) ou *Installer l'application* (Android).
+Le thème clair/sombre se règle avec le bouton 🌓 en haut à droite.
+
+## Droits des dossiers (PUID / PGID)
+
+Le conteneur démarre en root, corrige la propriété de `/library` et `/config`, puis passe à `PUID:PGID` (1000 par défaut).
+N'ajoutez pas `user:` dans le compose : il empêcherait cette correction.

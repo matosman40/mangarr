@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Mangas suivis</h1>
+{% if not mangas %}<div class="box warnbox" style="margin-bottom:1rem">👋 <b>Bienvenue !</b> Commencez par le
+  <a href="/status">diagnostic de l'installation</a> (droits, espace disque, services), puis
+  <a href="/library">importez vos mangas existants</a> ou <a href="/discover">découvrez-en</a>.</div>{% endif %}
 {% if retried %}<p class="{{ 'oktxt' if found else 'warntxt' }}">{{ found }} source(s) trouvée(s) sur {{ retried }} manga(s) à configurer.</p>{% endif %}
 {% if patreon_todo %}<p class="box warnbox"><a href="/patreon">🟣 {{ patreon_todo }} export(s) Patreon à récupérer</a> — le script du navigateur s'en charge.</p>{% endif %}
 {% if setup_count %}<form method="post" action="/retry-sources" class="box warnbox" style="margin-bottom:1rem">
