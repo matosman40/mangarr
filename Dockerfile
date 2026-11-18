@@ -10,10 +10,10 @@ ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 \
 COPY --from=builder /install /usr/local
 WORKDIR /app
 COPY mangarr ./mangarr
-# Utilisateur non root (UID/GID 1000 par défaut ; surchargeable avec `user:` dans compose)
-RUN useradd --uid 1000 --create-home --shell /usr/sbin/nologin mangarr \
-    && mkdir -p /library /config && chown mangarr:mangarr /library /config
-USER mangarr
+# Démarre en root pour réparer les droits des volumes, puis passe à PUID:PGID (1000 par défaut)
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh && mkdir -p /library /config
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 VOLUME ["/library", "/config"]
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
