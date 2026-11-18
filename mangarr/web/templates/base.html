@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Mangarr{% endblock %}</title>
+  <meta name="color-scheme" content="light dark">
+  <script>try{var t=localStorage.getItem("mangarr_theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/htmx.min.js"></script>
 </head>
@@ -11,21 +13,41 @@
 <header>
   <a class="brand" href="/">Mangarr</a>
   <nav>
-    <a href="/">Mangas</a>
-    <a href="/discover">Découvrir</a>
-    <a href="/library">Bibliothèque</a>
-    <a href="/add">Ajouter</a>
-    <a href="/sources">Sources</a>
-    <a href="/patreon">Patreon</a>
-    <a href="/logs">Journaux</a>
-    <a href="/settings">Réglages</a>
+    <a href="/" {{ 'class=on' if request.url.path == '/' or request.url.path.startswith('/manga') }}>Mangas</a>
+    <a href="/news" {{ 'class=on' if request.url.path.startswith('/news') }}>Actus</a>
+    <a href="/discover" {{ 'class=on' if request.url.path.startswith('/discover') }}>Découvrir</a>
+    <a href="/library" {{ 'class=on' if request.url.path.startswith('/library') }}>Bibliothèque</a>
+    <details class="more"><summary>Plus ▾</summary>
+      <div class="menu">
+        <a href="/add">➕ Ajouter</a>
+        <a href="/sources">Sources</a>
+        <a href="/patreon">Patreon</a>
+        <a href="/logs">Journaux</a>
+        <a href="/settings">Réglages</a>
+        {% if auth_enabled %}<form method="post" action="/logout"><button>Déconnexion</button></form>{% endif %}
+      </div>
+    </details>
   </nav>
   <div class="spacer"></div>
-  {% if busy %}<span class="badge busy">vérification en cours…</span>{% endif %}
-  <form method="post" action="/check"><button class="btn primary" {{ 'disabled' if busy }}>Tout vérifier</button></form>
-  {% if auth_enabled %}<form method="post" action="/logout"><button class="btn">Déconnexion</button></form>{% endif %}
+  {% if busy %}<span class="badge busy">vérification…</span>{% endif %}
+  <button class="btn theme" id="theme-btn" type="button" title="Changer le thème" aria-label="Changer le thème">🌓</button>
+  <form method="post" action="/check"><button class="btn primary" {{ 'disabled' if busy }}>⟳<span class="lbl"> Tout vérifier</span></button></form>
 </header>
 <main>{% block content %}{% endblock %}</main>
 <footer>Mangarr {{ version }}</footer>
+<script>
+(function(){
+  var btn=document.getElementById("theme-btn"),root=document.documentElement,order=["auto","light","dark"],icons={auto:"🌓",light:"☀️",dark:"🌙"},names={auto:"automatique",light:"clair",dark:"sombre"};
+  function cur(){return root.dataset.theme||"auto"}
+  function show(){var c=cur();btn.textContent=icons[c];btn.title="Thème : "+names[c]+" (cliquer pour changer)"}
+  btn.addEventListener("click",function(){
+    var n=order[(order.indexOf(cur())+1)%3];
+    if(n==="auto")delete root.dataset.theme;else root.dataset.theme=n;
+    try{if(n==="auto")localStorage.removeItem("mangarr_theme");else localStorage.setItem("mangarr_theme",n)}catch(e){}
+    show();
+  });
+  show();
+})();
+</script>
 </body>
 </html>

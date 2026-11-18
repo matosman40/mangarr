@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Actus · Mangarr{% endblock %}
+{% block content %}
+<h1>Actus des mangas suivis</h1>
+<p class="muted">News, infos sur les auteurs et discussions, via MyAnimeList. Dépliez un manga pour charger ses actus (mises en cache 6 h).</p>
+{% for m in mangas %}
+<details hx-get="/manga/{{ m.id }}/news" hx-trigger="toggle once" hx-target="find .slot" hx-swap="innerHTML">
+  <summary><b>{{ m.name.replace('_', ' ') }}</b> · <a href="/manga/{{ m.id }}">fiche</a></summary>
+  <div class="slot"><p class="empty">Chargement…</p></div>
+</details>
+{% else %}<p class="empty">Aucun manga suivi.</p>{% endfor %}
+{% endblock %}

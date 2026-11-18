@@ -1,44 +1,65 @@
 {% extends "base.html" %}
 {% block title %}{{ m.name.replace('_', ' ') }} · Mangarr{% endblock %}
 {% block content %}
-<div class="detail">
+<div class="hero">
   <div class="cover big">
     {% if m.has_cover %}<img src="/cover/{{ m.id }}" alt="">{% else %}<span>{{ m.name.replace('_', ' ')[:1] }}</span>{% endif %}
   </div>
-  <div>
+  <div class="hero-main">
     <h1>{{ m.name.replace('_', ' ') }}</h1>
+    <div class="pills">
+      {% if m.setup %}<span class="badge err">à configurer</span>
+      {% elif not m.enabled %}<span class="badge">suspendu</span>
+      {% elif m.state.last_status == 'error' %}<span class="badge err">erreur</span>
+      {% else %}<span class="badge ok">à jour</span>{% endif %}
+      <span class="badge">{{ m.source }}</span>
+    </div>
     {% if flash %}<p class="{{ 'oktxt' if flash_ok else 'errtxt' }}">{{ flash }}</p>{% endif %}
+    <div class="stats">
+      <div><b>{{ m.state.last_chapter or '–' }}</b><span>dernier chapitre</span></div>
+      <div><b>{{ m.tomes_count }}</b><span>tomes</span></div>
+      <div><b>{{ m.last_check_txt }}</b><span>dernière vérification</span></div>
+    </div>
+    {% if m.next_tome %}<p class="mut">Prochain tome : {{ m.next_tome }}{% if not m.tomes_enabled %} · assemblage désactivé{% endif %}</p>{% endif %}
+    {% if m.state.last_status == 'error' and m.state.last_message and not m.setup %}<div class="errbox">{{ m.state.last_message }}</div>{% endif %}
     {% if m.setup %}<div class="box warnbox">⚠️ {{ m.state.last_message }}.
-      {% if searched %}<br><small>Sources interrogées : {{ searched | join(', ') }}. Le manga n'est peut-être pas proposé par ces sites.</small>{% endif %}
+      {% if searched %}<br><small>Sources interrogées : {{ searched | join(', ') }}.</small>{% endif %}
       <div class="actions">
         <form method="post" action="/manga/{{ m.id }}/find-source"><button class="btn primary">Chercher la source à nouveau</button></form>
         <a class="btn" href="/manga/{{ m.id }}/edit">Choisir la source à la main</a>
       </div></div>{% endif %}
-    <dl>
-      <dt>Source</dt><dd>{{ m.source }}</dd>
-      <dt>Dernier chapitre</dt><dd>{{ m.state.last_chapter or '–' }}</dd>
-      <dt>Dernière vérification</dt><dd>{{ m.last_check_txt }} ({{ m.state.last_status or '–' }})</dd>
-      <dt>Tomes</dt><dd>{{ m.tomes_count }}{% if m.next_tome %} · prochain : {{ m.next_tome }}{% endif %}{% if not m.tomes_enabled %} · assemblage désactivé{% endif %}</dd>
-      {% if m.state.last_status == 'error' and m.state.last_message %}<dt>Erreur</dt><dd class="errtxt">{{ m.state.last_message }}</dd>{% endif %}
-    </dl>
     <div class="actions">
-      <form method="post" action="/manga/{{ m.id }}/check"><button class="btn primary" {{ 'disabled' if busy }}>Vérifier maintenant</button></form>
+      <form method="post" action="/manga/{{ m.id }}/check"><button class="btn primary" {{ 'disabled' if busy }}>⟳ Vérifier</button></form>
       <a class="btn" href="/manga/{{ m.id }}/edit">Modifier</a>
-      <form method="post" action="/manga/{{ m.id }}/toggle"><button class="btn">{{ 'Suspendre' if m.enabled else 'Reprendre' }}</button></form>
-      <form method="post" action="/manga/{{ m.id }}/delete" onsubmit="return confirm('Retirer du suivi ? Les fichiers de la bibliothèque sont conservés.')"><button class="btn danger">Retirer du suivi</button></form>
+      <details class="more"><summary class="btn">⋯</summary>
+        <div class="menu">
+          <form method="post" action="/manga/{{ m.id }}/toggle"><button>{{ 'Suspendre' if m.enabled else 'Reprendre' }}</button></form>
+          <form method="post" action="/manga/{{ m.id }}/delete" onsubmit="return confirm('Retirer du suivi ? Les fichiers de la bibliothèque sont conservés.')"><button class="danger">Retirer du suivi</button></form>
+        </div>
+      </details>
     </div>
-    <details><summary>Paramètres de source</summary><pre>{{ params }}</pre></details>
   </div>
 </div>
-<h2>Historique</h2>
-<table>
-  <tr><th>Date</th><th>Type</th><th>N°</th><th>Pages</th></tr>
-  {% for h in history %}<tr><td>{{ fmt_ts(h.ts) }}</td><td>{{ 'tome' if h.kind == 'tome' else 'chapitre' }}</td><td>{{ h.number }}</td><td>{{ h.pages or '' }}</td></tr>
-  {% else %}<tr><td colspan="4" class="empty">Rien pour l'instant.</td></tr>{% endfor %}
-</table>
-<h2>Journal</h2>
-<table class="logs">
-  {% for l in logs %}<tr class="lv-{{ l.level }}"><td>{{ fmt_ts(l.ts) }}</td><td>{{ l.message }}</td></tr>
-  {% else %}<tr><td class="empty">Aucune entrée.</td></tr>{% endfor %}
-</table>
+
+<div class="tabs">
+  <input type="radio" name="tab" id="t-news" checked><input type="radio" name="tab" id="t-hist"><input type="radio" name="tab" id="t-log"><input type="radio" name="tab" id="t-src">
+  <div class="tabbar">
+    <label for="t-news">Actus</label><label for="t-hist">Historique</label><label for="t-log">Journal</label><label for="t-src">Source</label>
+  </div>
+  <section class="panel p-news"><div hx-get="/manga/{{ m.id }}/news" hx-trigger="load" hx-swap="outerHTML"><p class="empty">Chargement des actus…</p></div></section>
+  <section class="panel p-hist">
+    <table>
+      <tr><th>Date</th><th>Type</th><th>N°</th><th>Pages</th></tr>
+      {% for h in history %}<tr><td>{{ fmt_ts(h.ts) }}</td><td>{{ 'tome' if h.kind == 'tome' else 'chapitre' }}</td><td>{{ h.number }}</td><td>{{ h.pages or '' }}</td></tr>
+      {% else %}<tr><td colspan="4" class="empty">Rien pour l'instant.</td></tr>{% endfor %}
+    </table>
+  </section>
+  <section class="panel p-log">
+    <table class="logs">
+      {% for l in logs %}<tr class="lv-{{ l.level }}"><td>{{ fmt_ts(l.ts) }}</td><td>{{ l.message }}</td></tr>
+      {% else %}<tr><td class="empty">Aucune entrée.</td></tr>{% endfor %}
+    </table>
+  </section>
+  <section class="panel p-src"><pre>{{ params }}</pre></section>
+</div>
 {% endblock %}

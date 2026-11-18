@@ -1,0 +1,35 @@
+<div class="newsbox">
+  {% if error %}<p class="errtxt">Actus indisponibles : {{ error }}{% if d %} (dernière version en cache affichée){% endif %}</p>{% endif %}
+  {% if d %}
+    {% set i = d.info %}
+    <p class="meta">
+      {{ [i.status, i.published, ('%s chapitres' % i.chapters) if i.chapters, ('★ %s' % i.score) if i.score] | select | join(' · ') }}
+      {% if d.url %} · <a href="{{ d.url }}" target="_blank" rel="noopener noreferrer">MyAnimeList</a>{% endif %}
+    </p>
+    <ul class="feed">
+      {% for n in d.feed %}
+      <li>
+        <span class="tag {{ n.src }}">{{ 'Reddit' if n.src == 'reddit' else 'MAL' }}</span>
+        {% if n.spoiler %}
+          <details class="spoil"><summary><span class="tag spoil">spoilers possibles</span> afficher</summary>
+            {% if n.url %}<a href="{{ n.url }}" target="_blank" rel="noopener noreferrer">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}
+            {% if n.excerpt %}<br><small>{{ n.excerpt }}</small>{% endif %}
+          </details>
+        {% else %}
+          {% if n.url %}<a href="{{ n.url }}" target="_blank" rel="noopener noreferrer">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}
+          {% if n.excerpt %}<br><small>{{ n.excerpt }}</small>{% endif %}
+        {% endif %}
+        <div class="meta">{{ n.date }}{% if n.meta %} · {{ n.meta }}{% endif %}</div>
+      </li>
+      {% else %}<li class="empty">Aucune actualité pour l'instant.</li>{% endfor %}
+    </ul>
+    {% if d.reddit_error %}<p class="meta">Reddit indisponible : {{ d.reddit_error }}</p>{% endif %}
+    {% if d.authors %}
+    <details><summary>Auteurs</summary>
+      {% for a in d.authors %}<p><b>{% if a.url %}<a href="{{ a.url }}" target="_blank" rel="noopener noreferrer">{{ a.name }}</a>{% else %}{{ a.name }}{% endif %}</b>
+        {% if a.about %}<br><small>{{ a.about }}</small>{% endif %}</p>{% endfor %}
+    </details>
+    {% endif %}
+  {% elif not error %}<p class="empty">Aucune donnée.</p>{% endif %}
+  <p><button class="btn" hx-get="/manga/{{ m.id }}/news?refresh=1" hx-target="closest .newsbox" hx-swap="outerHTML">Actualiser</button></p>
+</div>

@@ -29,6 +29,11 @@ class Settings:
     chapter_delay: float = 2.0
     max_pages: int = 250
     mangadex_api: str = "https://api.mangadex.org"
+    jikan_api: str = "https://api.jikan.moe/v4"     # actus MyAnimeList (news, auteurs, discussions)
+    reddit_url: str = "https://www.reddit.com"      # API Reddit officielle (jeton OAuth)
+    reddit_oauth_url: str = "https://oauth.reddit.com"
+    reddit_client_id: str = ""                      # application « script » gratuite : reddit.com/prefs/apps
+    reddit_client_secret: str = ""
 
     def __post_init__(self):
         if not self.chapters_dir:
@@ -68,4 +73,9 @@ def load_settings() -> Settings:
         chapter_delay=_float("MANGARR_CHAPTER_DELAY", 2.0),
         max_pages=_int("MANGARR_MAX_PAGES", 250),
         mangadex_api=e.get("MANGARR_MANGADEX_API", "https://api.mangadex.org"),
+        jikan_api=e.get("MANGARR_JIKAN_API", "https://api.jikan.moe/v4"),
+        reddit_url=e.get("MANGARR_REDDIT_URL", "https://www.reddit.com"),
+        reddit_oauth_url=e.get("MANGARR_REDDIT_OAUTH_URL", "https://oauth.reddit.com"),
+        reddit_client_id=e.get("MANGARR_REDDIT_CLIENT_ID", ""),
+        reddit_client_secret=e.get("MANGARR_REDDIT_CLIENT_SECRET", ""),
     )
