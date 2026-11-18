@@ -4,6 +4,12 @@
 set -e
 
 if [ "$(id -u)" != "0" ]; then
+    for d in "${MANGARR_LIBRARY:-/library}" "${MANGARR_CONFIG:-/config}"; do
+        if [ -n "$(find "$d" ! -writable -print -quit 2>/dev/null)" ]; then
+            echo "[entrypoint] ATTENTION : des éléments de $d ne sont pas inscriptibles par $(id -u):$(id -g)."
+            echo "[entrypoint] Retirez « user: » du docker-compose (le conteneur corrigera les droits seul), ou : chown -R $(id -u):$(id -g) <dossier hôte>"
+        fi
+    done
     exec "$@"
 fi
 

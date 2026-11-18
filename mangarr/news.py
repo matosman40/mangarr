@@ -55,6 +55,16 @@ def find_mal_id(session, api, name):
     return data[0]["mal_id"]
 
 
+def mal_cover_url(session, api, name):
+    """URL de la jaquette MyAnimeList (titre exact de préférence, sinon meilleur résultat) ou None."""
+    title = name.replace("_", " ")
+    data = _get(session, api, "/manga", q=title, limit=8, order_by="popularity", sort="asc").get("data", [])
+    pick = next((d for d in data if any(t and norm(t) == norm(title) for t in
+                 [d.get("title"), d.get("title_english"), *[x.get("title") for x in d.get("titles", [])]])),
+                data[0] if data else None)
+    return ((pick or {}).get("images", {}).get("jpg", {}) or {}).get("large_image_url")
+
+
 def _text(s, n=400):
     s = re.sub(r"\s+", " ", s or "").strip()
     return (s[:n].rsplit(" ", 1)[0] + "…") if len(s) > n else s

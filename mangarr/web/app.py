@@ -102,7 +102,14 @@ def next_tome(ctx, m):
 def create_app(ctx, scheduler=None, password=None):
     app = FastAPI(title="Mangarr", version=__version__, docs_url=None, redoc_url=None, openapi_url=None)
     templates = Jinja2Templates(directory=str(BASE / "templates"))
-    templates.env.globals.update(version=__version__, fmt_ts=fmt_ts, cover_src=cover_src)
+    def asset_v():
+        """Empreinte de la feuille de style : le navigateur recharge le CSS dès qu'il change (pas de vieux cache)."""
+        try:
+            return int(os.path.getmtime(BASE / "static" / "style.css"))
+        except OSError:
+            return __version__
+
+    templates.env.globals.update(version=__version__, fmt_ts=fmt_ts, cover_src=cover_src, asset_v=asset_v)
     auth = Auth(password if password is not None else os.environ.get("MANGARR_PASSWORD", ""),
                 ctx.settings.config_dir)
     app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
@@ -198,6 +205,8 @@ def create_app(ctx, scheduler=None, password=None):
         m = ctx.repo.get_manga(mid)
         if not m:
             return Response("Manga introuvable", status_code=404)
+        if not (m.get("cover") and os.path.isfile(m["cover"])):
+            covers.ensure_async(ctx, force=True)          # jaquette manquante : on la cherche tout de suite
         return render(request, "manga.html", m=manga_view(ctx, m), flash=msg, flash_ok=(src == "ok"),
                       searched=searchable_names(), history=ctx.repo.history(mid, 50),
                       logs=ctx.repo.logs(60, mid), params=json.dumps(m["params"], indent=2, ensure_ascii=False))

@@ -6,7 +6,7 @@
   <title>{% block title %}Mangarr{% endblock %}</title>
   <meta name="color-scheme" content="light dark">
   <script>try{var t=localStorage.getItem("mangarr_theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v={{ asset_v() }}">
   <script src="/static/htmx.min.js"></script>
 </head>
 <body>

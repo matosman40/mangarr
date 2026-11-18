@@ -24,4 +24,6 @@ def permission_hint(path):
         return ""
     return (f"Mangarr s'exécute avec l'utilisateur {uid}:{gid} ; « {p} » appartient à {st.st_uid}:{st.st_gid} "
             f"(droits {oct(st.st_mode & 0o777)}). Donnez l'accès en écriture à {uid}:{gid} (chown/chmod), "
-            f"ou réglez l'utilisateur du conteneur sur {st.st_uid}:{st.st_gid}.")
+            f"ou réglez l'utilisateur du conteneur sur {st.st_uid}:{st.st_gid}. "
+            f"Astuce : retirez « user: » du docker-compose (le conteneur corrige alors les droits seul au démarrage), "
+            f"ou lancez sur l'hôte : chown -R {uid}:{gid} <dossier de la bibliothèque>.")

@@ -6,6 +6,7 @@ import threading
 import time
 from zipfile import ZipFile
 
+from mangarr import news
 from mangarr.core.net import fetch_image, sniff_image_ext
 from mangarr.tomes import mangadex
 
@@ -50,13 +51,19 @@ def ensure_cover(ctx, manga, folder, tomes_dir, md_id=None, md_api=mangadex.MD_A
         if os.path.isdir(d):
             dest = os.path.join(d, "cover.jpg")
             if not os.path.exists(dest):
-                shutil.copyfile(stored, dest)
+                try:
+                    shutil.copyfile(stored, dest)
+                except OSError:       # dossier en lecture seule : la jaquette reste dans /config, sans bloquer
+                    pass
     return stored
+
+
+COVER_PREFIXES = ("https://uploads.mangadex.org/", "https://cdn.myanimelist.net/")
 
 
 def store_md_cover(ctx, mid, url):
     """Télécharge la jaquette choisie (uniquement depuis uploads.mangadex.org) et l'associe au manga."""
-    if not url.startswith("https://uploads.mangadex.org/"):
+    if not url.startswith(COVER_PREFIXES):
         return False
     st, data = fetch_image(ctx.fast_session, url)
     if st != "ok" or sniff_image_ext(data) is None:
@@ -162,14 +169,16 @@ def fill_missing(ctx, limit=30):
             done += 1
             continue
         md_id = m["params"].get("mangadex_id")
+        why = []
         if md_id:
             try:
                 url = mangadex.cover_url(ctx.fast_session, md_id, ctx.settings.mangadex_api)
                 if url and store_md_cover(ctx, m["id"], url):
                     done += 1
                     continue
-            except Exception:
-                pass
+                why.append("MangaDex : pas de jaquette")
+            except Exception as e:
+                why.append(f"MangaDex : {type(e).__name__}")
         data = _first_archive_image(dirs)
         if data:
             _save(ctx, m, data)
@@ -179,6 +188,17 @@ def fill_missing(ctx, limit=30):
             url = _md_url_for_name(ctx, m)
             if url and store_md_cover(ctx, m["id"], url):
                 done += 1
+                continue
+            why.append("MangaDex : titre introuvable")
+        try:                                         # dernier recours : MyAnimeList
+            url = news.mal_cover_url(ctx.fast_session, ctx.settings.jikan_api, m["name"])
+            if url and store_md_cover(ctx, m["id"], url):
+                done += 1
+                continue
+            why.append("MyAnimeList : pas de jaquette")
+        except Exception as e:
+            why.append(f"MyAnimeList : {type(e).__name__}")
+        ctx.repo.add_log("warn", "jaquette introuvable (" + " ; ".join(why) + ")", m["id"])
     return done
 
 
